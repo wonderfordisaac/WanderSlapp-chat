@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="ny">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Good Driver - Pro Full with Wallet</title>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-database-compat.js"></script>
+
+    <style>
+        body { margin: 0; background: #000; overflow: hidden; font-family: Arial, sans-serif; touch-action: none; color: white; height: 100vh; }
+        canvas { display: block; width: 100vw; height: 100vh; object-fit: cover; }
+        
+        #overlay-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9); display: flex; flex-direction: column;
+            align-items: center; justify-content: center; z-index: 100;
+        }
+        .screen { text-align: center; width: 90%; max-width: 500px; display: none; }
+        .active { display: block; }
+
+        .btn-wallet {
+            position: absolute; top: 20px; right: 20px; background: #ffc107;
+            color: #000; border: none; padding: 10px 15px; border-radius: 10px;
+            font-weight: bold; cursor: pointer; z-index: 110; font-size: 12px;
+        }
+
+        .btn-green {
+            background: #28a745; color: white; border: none; padding: 15px 40px;
+            font-size: 20px; font-weight: bold; border-radius: 50px; margin-top: 20px;
+        }
+
+        .bike-grid {
+            display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;
+            margin: 15px 0; max-height: 50vh; overflow-y: auto;
+        }
+        .bike-box { background: #222; border: 2px solid #444; padding: 10px; border-radius: 10px; }
+        .bike-box.selected { border-color: #ffc107; }
+        .bike-box img { width: 100px; height: 60px; object-fit: cover; }
+
+        #wallet-page {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #0a142b; z-index: 2000; flex-direction: column; align-items: center; padding-top: 50px;
+        }
+        .wallet-card { background: #1a2a4a; padding: 20px; border-radius: 20px; width: 80%; text-align: center; margin-bottom: 20px; }
+        .wallet-input { width: 80%; padding: 12px; border-radius: 10px; border: none; margin: 10px 0; text-align: center; font-size: 18px; }
+        .btn-transfer { background: #28a745; color: white; border: none; padding: 12px 20px; border-radius: 10px; width: 80%; margin: 5px; font-weight: bold; }
+
+        #game-hud { 
+            position: absolute; top: 15px; width: 100%; pointer-events: none;
+            display: none; justify-content: space-around; z-index: 50;
+            text-shadow: 2px 2px #000; font-weight: bold; font-size: 16px;
+            background: rgba(0,0,0,0.3); padding: 5px 0;
+        }
+
+        .controls { 
+            position: absolute; bottom: 20px; width: 100%; 
+            display: none; justify-content: space-between; 
+            padding: 0 15px; box-sizing: border-box; z-index: 50; 
+        }
+        .d-pad { display: grid; grid-template-columns: repeat(3, 55px); gap: 5px; }
+        .joy-btn {
+            width: 55px; height: 55px; background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.4); border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; font-size: 24px;
+        }
+        .utility-btns { display: flex; flex-direction: column; gap: 8px; }
+        .util-btn { width: 75px; height: 45px; border-radius: 8px; background: rgba(255,193,7,0.3); border: 1px solid #ffc107; color: white; font-weight: bold; font-size: 11px; }
+
+        #game-status {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7); display: none; flex-direction: column;
+            align-items: center; justify-content: center; z-index: 150;
+        }
+    </style>
+</head>
+<body>
+
+<audio id="sndClick" src="sounds/click.wav"></audio>
+<audio id="sndCrash" src="sounds/crash.mp3"></audio>
+<audio id="sndBoost" src="sounds/boost.m4r"></audio>
+<audio id="sndLevel" src="sounds/levelup.m4r"></audio>
+<audio id="sndBg" src="sounds/background.mp3" loop></audio>
+
+<div id="wallet-page">
+    <h2>WALLET SYSTEM</h2>
+    <div class="wallet-card">
+        <small>Game Balance</small>
+        <h2 id="w_gameBal">MK 0</h2>
+        <hr>
+        <small>Monitization Balance</small>
+        <h2 id="w_moniBal" style="color: #28a745;">MK 0</h2>
+    </div>
+    <input type="number" id="transferAmt" class="wallet-input" placeholder="Enter Amount">
+    <button class="btn-transfer" onclick="withdrawToMoni()">SEND YOUR MONAY TO MONITIZATION</button>
+    <button class="btn-transfer" style="background:#007bff;" onclick="depositFromMoni()">DEPOSIT TO GAME</button>
+    <button class="btn-transfer" style="background:#666;" onclick="closeWallet()">CLOSE</button>
+</div>
+
+<div id="overlay-layer">
+    <button class="btn-wallet" id="walletBtn" onclick="openWallet()">WITHDRAW / DEPOSIT</button>
+    
+    <div id="screen-info" class="screen active">
+        <h1>GOOD DRIVER INSTRUCTIONS</h1>
+        <p>Make monay with this game.</p>
+        <p>You will receive MK10 when you cross obstacles!</p>
+        <p>with your balance you can buy a new bike</p>
+        <P>Send your good driver money to your monitaizetion, if you wont to withdraw</P>
+        <p>Do you want to buy a bike, but don't have the money? depost from your monitaizetion balance</p>
+        <button class="btn-green" onclick="showScreen('screen-bikes')">NEXT</button>
+    </div>
+
+    <div id="screen-bikes" class="screen">
+        <h3 id="balance-txt">BALANCE: MK 0</h3>
+        <div class="bike-grid" id="bike-container"></div>
+        <button class="btn-green" style="background:#666;" onclick="showScreen('screen-info')">BACK</button>
+    </div>
+</div>
+
+<div id="game-status">
+    <h1 id="status-title">PAUSED</h1>
+    <button class="btn-green" id="status-action-btn">RESUME</button>
+</div>
+
+<div id="game-hud">
+    <span id="score-val">SCORE: 0</span>
+    <span id="level-val">LEVEL: 1</span>
+    <span id="balance-val">MK: 0</span>
+</div>
+
+<canvas id="gameCanvas"></canvas>
+
+<div class="controls" id="ui-controls">
+    <div class="d-pad">
+        <div></div><div class="joy-btn" id="up">↑</div><div></div>
+        <div class="joy-btn" id="left">←</div><div></div><div class="joy-btn" id="right">→</div>
+        <div></div><div class="joy-btn" id="down">↓</div><div></div>
+    </div>
+    <div class="utility-btns">
+        <button class="util-btn" id="boost-btn">BOOST</button>
+        <button class="util-btn" id="pause-btn">PAUSE</button>
+        <button class="util-btn" id="mute-btn">MUTE</button>
+    </div>
+</div>
+
+<script>
+// --- FIREBASE CONFIG ---
+const firebaseConfig = {
+    apiKey: "AIzaSyDt_ayoflnFkRRnS2fXITY2EzJz0KcW5QA",
+    authDomain: "makert-bfb76.firebaseapp.com",
+    databaseURL: "https://makert-bfb76-default-rtdb.firebaseio.com",
+    projectId: "makert-bfb76",
+    storageBucket: "makert-bfb76.firebasestorage.app",
+    messagingSenderId: "245693362931",
+    appId: "1:245693362931:web:e15662a22dd50d2ac63d86"
+};
+firebase.initializeApp(firebaseConfig);
+const rtdb = firebase.database();
+const auth = firebase.auth();
+
+let myID, moniBal = 0;
+
+auth.onAuthStateChanged(user => {
+    if(user) {
+        myID = user.uid;
+        syncWithMonitization();
+    }
+});
+
+function syncWithMonitization() {
+    rtdb.ref(`monit_stats/${myID}`).on('value', snap => {
+        const d = snap.val() || {};
+        let money = (d.likes || 0) * 5.50 + (d.comments || 0) * 10.50 + (d.shares || 0) * 1.00;
+        money += (d.ads_image_views || 0) * 25.00 + (d.ads_video_views || 0) * 10.00;
+        let comm = d.build_community || 0;
+        money += Math.floor(comm / 5) * 5;
+        let adjustment = d.admin_adjustment || 0;
+        moniBal = (money + adjustment) - (d.total_withdrawn || 0);
+        document.getElementById("w_moniBal").innerText = "MK " + moniBal.toFixed(2);
+    });
+}
+
+function openWallet() {
+    document.getElementById("wallet-page").style.display = "flex";
+    document.getElementById("w_gameBal").innerText = "MK " + balance;
+}
+
+function closeWallet() {
+    document.getElementById("wallet-page").style.display = "none";
+}
+
+function withdrawToMoni() {
+    const amt = parseFloat(document.getElementById("transferAmt").value);
+    if(amt > 0 && amt <= balance) {
+        balance -= amt;
+        saveData();
+        rtdb.ref(`monit_stats/${myID}/admin_adjustment`).transaction(c => (c || 0) + amt);
+        alert("Sent to Monitization!");
+        document.getElementById("w_gameBal").innerText = "MK " + balance;
+        updateBalanceUI();
+    } else {
+        alert("Invalid Amount!");
+    }
+}
+
+function depositFromMoni() {
+    const amt = parseFloat(document.getElementById("transferAmt").value);
+    if(amt > 0 && amt <= moniBal) {
+        balance += amt;
+        saveData();
+        rtdb.ref(`monit_stats/${myID}/admin_adjustment`).transaction(c => (c || 0) - amt);
+        alert("Deposit Successful!");
+        document.getElementById("w_gameBal").innerText = "MK " + balance;
+        updateBalanceUI();
+    } else {
+        alert("Not enough Monitization Balance!");
+    }
+}
+
+// --- GAME LOGIC ---
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+let WIN_W = window.innerWidth;
+let WIN_H = window.innerHeight;
+canvas.width = WIN_W; canvas.height = WIN_H;
+
+let balance = parseInt(localStorage.getItem('balance')) || 0;
+let ownedBikes = JSON.parse(localStorage.getItem('ownedBikes')) || [true, false, false, false, false, false];
+const bikePrices = [0, 5000, 10000, 20000, 30000, 40000, 50000, 60000, 70000, 80000, 90000, 100000];
+let selectedBike = 0;
+
+let gameActive = false;
+let isPaused = false;
+let isMuted = false;
+let score = 0;
+let level = 1;
+let gameSpeed = 4;
+let bgY = 0;
+
+const assets = { roads: [], bikes: [], obstacles: [] };
+const player = { x: WIN_W/2 - 35, y: WIN_H - 150, w: 70, h: 70 };
+let enemies = [];
+let keys = { up: false, down: false, left: false, right: false };
+
+function init() {
+    ["forestRoad.jpg", "desertRoad.jpg", "cityRoad.jpg"].forEach(p => {
+        let i = new Image(); i.src = "images/" + p; assets.roads.push(i);
+    });
+    for(let i=1; i<=8; i++) {
+        let img = new Image();
+        img.src = i === 1 ? "images/motor1.jpeg" : `images/bike${i}.jpeg`;
+        assets.bikes.push(img);
+    }
+    ["tax2.jpeg", "zex1.jpeg", "zex2.jpeg"].forEach(p => {
+        let i = new Image(); i.src = "images/" + p; assets.obstacles.push(i);
+    });
+    updateBalanceUI();
+    animate();
+}
+
+function showScreen(id) {
+    playSound('sndClick');
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    if(id === 'screen-bikes') renderBikes();
+}
+
+function renderBikes() {
+    const container = document.getElementById('bike-container');
+    container.innerHTML = "";
+    for(let i=0; i<8; i++) {
+        const isOwned = ownedBikes[i];
+        container.innerHTML += `
+            <div class="bike-box ${selectedBike === i ? 'selected' : ''}">
+                <img src="${i === 0 ? 'images/motor1.jpeg' : 'images/bike'+(i+1)+'.jpeg'}">
+                <div style="font-size:12px; margin:5px 0;">${isOwned ? 'OWNED' : 'MK '+bikePrices[i]}</div>
+                <button onclick="handleBike(${i})" style="width:100%; background:${isOwned ? '#28a745':'#007bff'}; color:white; border:none; padding:5px; border-radius:5px; font-weight:bold;">
+                    ${isOwned ? 'PLAY' : 'BUY'}
+                </button>
+            </div>
+        `;
+    }
+}
+
+function handleBike(idx) {
+    if(ownedBikes[idx]) {
+        selectedBike = idx;
+        startGame();
+    } else if(balance >= bikePrices[idx]) {
+        balance -= bikePrices[idx];
+        ownedBikes[idx] = true;
+        saveData(); renderBikes(); updateBalanceUI();
+    }
+}
+
+function startGame() {
+    document.getElementById('overlay-layer').style.display = 'none';
+    document.getElementById('ui-controls').style.display = 'flex';
+    document.getElementById('game-hud').style.display = 'flex';
+    playSound('sndBg');
+    resetGameData();
+    gameActive = true;
+}
+
+function resetGameData() {
+    score = 0; level = 1; gameSpeed = 4; enemies = []; 
+    player.x = WIN_W/2 - 35; player.y = WIN_H - 150;
+    updateHUD();
+}
+
+function update() {
+    if(!gameActive || isPaused) return;
+    bgY += gameSpeed;
+    if(bgY >= WIN_H) bgY = 0;
+    if(keys.left) player.x -= 8;
+    if(keys.right) player.x += 8;
+    if(keys.up) player.y -= 6;
+    if(keys.down) player.y += 8;
+    player.x = Math.max(5, Math.min(WIN_W - player.w - 5, player.x));
+    player.y = Math.max(5, Math.min(WIN_H - player.h - 5, player.y));
+
+    if(Math.random() < 0.03 && enemies.length < 5) {
+        enemies.push({ x: 10 + Math.random()*(WIN_W-70), y: -100, w: 60, h: 60, img: assets.obstacles[Math.floor(Math.random()*3)], passed: false });
+    }
+
+    enemies.forEach((e, i) => {
+        e.y += gameSpeed;
+        if(player.x + 10 < e.x + e.w - 10 && player.x + player.w - 10 > e.x + 10 &&
+           player.y + 10 < e.y + e.h - 10 && player.y + player.h - 10 > e.y + 10) {
+            triggerGameOver();
+        }
+        if(!e.passed && e.y > WIN_H) {
+            e.passed = true; score += 100; balance += 10;
+            if(score % 1000 === 0) { 
+                level++; 
+                gameSpeed += 0.4; 
+                playSound('sndLevel'); 
+            }
+            saveData(); updateHUD();
+        }
+    });
+    enemies = enemies.filter(e => e.y < WIN_H + 100);
+}
+
+function draw() {
+    ctx.clearRect(0, 0, WIN_W, WIN_H);
+    // LOGIC: Road izizungulira (Forest, Desert, City, Forest...)
+    let roadIdx = (level - 1) % assets.roads.length;
+    let road = assets.roads[roadIdx]; 
+    if(road) {
+        ctx.drawImage(road, 0, bgY - WIN_H, WIN_W, WIN_H);
+        ctx.drawImage(road, 0, bgY, WIN_W, WIN_H);
+    }
+    enemies.forEach(e => e.img && ctx.drawImage(e.img, e.x, e.y, e.w, e.h));
+    if(assets.bikes[selectedBike]) ctx.drawImage(assets.bikes[selectedBike], player.x, player.y, player.w, player.h);
+}
+
+function animate() { update(); draw(); requestAnimationFrame(animate); }
+
+function triggerGameOver() {
+    gameActive = false;
+    playSound('sndCrash');
+    document.getElementById('status-title').innerText = "GAME OVER";
+    document.getElementById('status-action-btn').innerText = "RESTART";
+    document.getElementById('game-status').style.display = "flex";
+}
+
+// Logic yoyendetsa ma sound onse limodzi
+function playSound(id) {
+    let s = document.getElementById(id);
+    if(s) {
+        s.muted = isMuted;
+        if(id === 'sndBg') {
+            s.play().catch(()=>{}); 
+        } else {
+            s.currentTime = 0;
+            s.play().catch(()=>{});
+        }
+    }
+}
+
+document.getElementById('status-action-btn').onclick = () => {
+    playSound('sndClick');
+    if(!gameActive) { resetGameData(); gameActive = true; document.getElementById('game-status').style.display = "none"; }
+    else { isPaused = false; document.getElementById('game-status').style.display = "none"; }
+};
+
+document.getElementById('pause-btn').onclick = () => {
+    playSound('sndClick');
+    isPaused = !isPaused;
+    if(isPaused) {
+        document.getElementById('status-title').innerText = "PAUSED";
+        document.getElementById('status-action-btn').innerText = "RESUME";
+        document.getElementById('game-status').style.display = "flex";
+    }
+};
+
+document.getElementById('mute-btn').onclick = () => {
+    isMuted = !isMuted;
+    // Mute ma audio elements onse nthawi imodzi
+    const audios = document.querySelectorAll('audio');
+    audios.forEach(a => a.muted = isMuted);
+    document.getElementById('mute-btn').innerText = isMuted ? "UNMUTE" : "MUTE";
+};
+
+function bind(id, k) {
+    const el = document.getElementById(id);
+    el.ontouchstart = (e) => { e.preventDefault(); keys[k] = true; };
+    el.ontouchend = (e) => { e.preventDefault(); keys[k] = false; };
+}
+bind('up','up'); bind('down','down'); bind('left','left'); bind('right','right');
+
+document.getElementById('boost-btn').ontouchstart = (e) => {
+    e.preventDefault(); gameSpeed += 6; 
+    playSound('sndBoost');
+    setTimeout(() => gameSpeed -= 6, 1500);
+};
+
+function updateHUD() {
+    document.getElementById('score-val').innerText = "SCORE: " + score;
+    document.getElementById('level-val').innerText = "LEVEL: " + level;
+    document.getElementById('balance-val').innerText = "MK: " + balance;
+}
+function updateBalanceUI() { document.getElementById('balance-txt').innerText = "BALANCE: MK " + balance; }
+function saveData() {
+    localStorage.setItem('balance', balance);
+    localStorage.setItem('ownedBikes', JSON.stringify(ownedBikes));
+}
+
+init();
+</script>
+<script src="gameAds.js"></script>
+</body>
+</html>

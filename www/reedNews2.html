@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ny">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>News Feed</title>
+     
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-database-compat.js"></script>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #ffffff; margin: 0; padding: 0; }
+        
+        #hub-section { padding: 20px; }
+        .channels-grid { 
+            display: grid; 
+            grid-template-columns: repeat(2, 1fr); 
+            gap: 20px; 
+            max-width: 900px; 
+            margin: auto; 
+        }
+        
+        /* Box ya logo yokha */
+        .channel-card { 
+            text-align: center; 
+            cursor: pointer; 
+            background: transparent; /* Chotsani background ya card yonse */
+        }
+
+        .logo-box {
+            width: 100%;
+            aspect-ratio: 1 / 1; /* Pangani kukhala square */
+            background: #f8f9fa;
+            border-radius: 12px;
+            border: 1px solid #eee;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+
+        .channel-card img { 
+            width: 100%; 
+            height: 100%; 
+            border-radius: 0; /* Chotsani chozungulira chija */
+            object-fit: contain; /* Logo iwoneke yonse popanda kudulidwa */
+            padding: 5px; /* Mpata pang'ono m'mbali mwa logo */
+        }
+
+        .channel-card h3 { 
+            font-size: 14px; 
+            margin: 0; 
+            color: #333; 
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        /* News Sections (Zotsala izi ndasiya mmene munaliri) */
+        .news-header {
+            position: sticky; top: 0; width: 100%; background: #1a1a1a; color: white;
+            padding: 15px 20px; display: flex; align-items: center; justify-content: space-between;
+            z-index: 1000; box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+        .back-btn { background: #333; color: white; border: 1px solid #555; padding: 8px 15px; border-radius: 20px; cursor: pointer; }
+        .header-title { font-weight: bold; font-size: 18px; text-transform: uppercase; }
+
+        #news-display { display: none; background: white; min-height: 100vh; }
+        .news-item { width: 100%; border-bottom: 8px solid #f0f2f5; margin-bottom: 10px; padding-bottom: 20px; }
+        .news-img { width: 100%; display: block; height: auto; max-height: 500px; object-fit: cover; }
+        .news-content { padding: 15px 20px; }
+        .news-title { font-size: 22px; font-weight: 800; color: #050505; margin-bottom: 10px; line-height: 1.2; word-wrap: break-word; }
+        .news-text { font-size: 16px; color: #1c1e21; line-height: 1.5; white-space: pre-wrap; word-wrap: break-word; }
+        .see-more { color: #1877f2; font-weight: bold; cursor: pointer; margin-top: 10px; display: inline-block; }
+        .date-meta { font-size: 12px; color: #65676b; margin-top: 15px; }
+        .back-link { background: #333; color: white; margin-top: 10%; }
+
+    </style>
+</head>
+<body>
+    <a href="dashboard.html" class="back-link"><i class="fi fi-sr-arrow-left">Back to home</i></a>
+
+    <div id="hub-section">
+        <h2 style="text-align:center; margin-bottom:30px;">News Channels</h2>
+        <div class="channels-grid">
+            
+            <div class="channel-card" onclick="showNews('zex_id', 'WANDERSLAPP COMPANY')">
+                <div class="logo-box">
+                    <img src="images/theme1.jpg" onerror="this.src='https://via.placeholder.com/150?text=No+Image'">
+                </div>
+                <h3>WANDERSLAPP NEWS</h3>
+            </div>
+
+            <div class="channel-card" onclick="showNews('bulijet_id', 'ISAAC W')">
+                <div class="logo-box">
+                    <img src="images/zex2.jpg" onerror="this.src='https://via.placeholder.com/150?text=No+Image'">
+                </div>
+                <h3>ISAAC W</h3>
+            </div>            
+
+        </div>
+    </div>
+
+    <div id="news-display">
+        <div class="news-header">
+            <button class="back-btn" onclick="goBack()">BACK TO NEWS</button>
+            <div class="header-title" id="head-name">CHANNEL</div>
+            <div style="width:50px"></div> 
+        </div>
+        <div id="news-feed"></div>
+    </div>
+
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyDt_ayoflnFkRRnS2fXITY2EzJz0KcW5QA",
+        authDomain: "makert-bfb76.firebaseapp.com",
+        databaseURL: "https://makert-bfb76-default-rtdb.firebaseio.com",
+        projectId: "makert-bfb76",
+        storageBucket: "makert-bfb76.firebasestorage.app",
+        messagingSenderId: "245693362931",
+        appId: "1:245693362931:web:e15662a22dd50d2ac63d86"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    let activeRef = null;
+    let storeText = {};
+
+    function formatText(text) {
+        if(!text) return "";
+        return text.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank">$1</a>');
+    }
+
+    function showNews(channelID, channelName) {
+        document.getElementById('hub-section').style.display = 'none';
+        document.getElementById('news-display').style.display = 'block';
+        document.getElementById('head-name').innerText = channelName;
+        window.scrollTo(0,0);
+
+        const feed = document.getElementById('news-feed');
+        feed.innerHTML = "<p style='text-align:center; padding:50px;'>Loading news...</p>";
+
+        if (activeRef) { activeRef.off(); }
+        activeRef = db.ref('channels/' + channelID);
+
+        activeRef.on('value', snap => {
+            const data = snap.val();
+            feed.innerHTML = "";
+            if(data) {
+                Object.keys(data).reverse().forEach(key => {
+                    const post = data[key];
+                    const fullText = post.text || "";
+                    storeText[key] = fullText;
+
+                    const lines = fullText.split(/\r\n|\r|\n/);
+                    const isTooLong = lines.length > 5 || fullText.length > 250;
+                    
+                    let displayMsg = fullText;
+                    if (isTooLong) {
+                        displayMsg = lines.slice(0, 5).join("\n").substring(0, 250) + "...";
+                    }
+
+                    const item = document.createElement('div');
+                    item.className = 'news-item';
+                    item.innerHTML = `
+                        ${post.image ? `<img src="${post.image}" class="news-img">` : ''}
+                        <div class="news-content">
+                            ${post.title ? `<div class="news-title">${post.title}</div>` : ''}
+                            <div id="txt-${key}" class="news-text">${formatText(displayMsg)}</div>
+                            ${isTooLong ? `<span class="see-more" onclick="toggle('${key}')" id="btn-${key}">See more...</span>` : ''}
+                            <div class="date-meta">${new Date(post.time).toLocaleString()}</div>
+                        </div>
+                    `;
+                    feed.appendChild(item);
+                });
+            } else {
+                feed.innerHTML = "<p style='text-align:center; padding:50px;'>No news found.</p>";
+            }
+        });
+    }
+
+    function toggle(id) {
+        const el = document.getElementById('txt-'+id);
+        const btn = document.getElementById('btn-'+id);
+        const full = storeText[id];
+
+        if(btn.innerText === "See more...") {
+            el.innerHTML = formatText(full);
+            btn.innerText = "Show less";
+        } else {
+            const lines = full.split(/\r\n|\r|\n/);
+            const short = lines.slice(0, 5).join("\n").substring(0, 250) + "...";
+            el.innerHTML = formatText(short);
+            btn.innerText = "See more...";
+        }
+    }
+
+    function goBack() {
+        if (activeRef) { activeRef.off(); }
+        document.getElementById('hub-section').style.display = 'block';
+        document.getElementById('news-display').style.display = 'none';
+    }
+</script>
+</body>
+</html>

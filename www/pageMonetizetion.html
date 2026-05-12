@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="ny">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WanderSlapp Monitization - Page Mode</title>
+    
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
+    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-solid-rounded/css/uicons-solid-rounded.css">
+
+    <style>
+        :root { --main: #0a142b; --accent: #28a745; --bg: #f0f2f5; --white: #ffffff; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 0; }
+        
+        header { background: var(--main); color: white; padding: 15px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 1000; }
+        .back-btn { background: none; border: none; color: white; text-decoration: none; font-size: 20px; cursor: pointer; }
+        
+        .container { padding: 10px; }
+        .card { background: var(--white); border-radius: 15px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .balance-box { background: linear-gradient(135deg, #0f2027, #203a43); color: white; text-align: center; padding: 25px; border-radius: 20px; position: relative; }
+        .balance-box h1 { margin: 10px 0; font-size: 32px; color: #fbff00; }
+        
+        .stat-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f0f0f0; font-size: 14px; }
+        .stat-row:last-child { border: none; }
+        .section-title { font-weight: 800; font-size: 13px; color: #888; text-transform: uppercase; margin: 15px 0 10px 5px; text-align: center; }
+
+        .btn-withdraw { position: absolute; right: 15px; top: 15px; background: var(--accent); color: white; border: none; padding: 8px 15px; border-radius: 30px; font-weight: bold; font-size: 12px; }
+        .btn-save { background: var(--accent); color: white; border: none; padding: 15px; width: 100%; border-radius: 10px; font-weight: bold; margin-top: 20px; cursor: pointer; }
+
+        .overlay-page { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 2000; overflow-y: auto; }
+        .form-group { margin-bottom: 15px; padding: 0 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 13px; }
+        input, select { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; }
+
+        #popup { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 85%; background: white; padding: 20px; border-radius: 20px; z-index: 3000; text-align: center; box-shadow: 0 0 50px rgba(0,0,0,0.5); }
+        .contact-box { display: flex; justify-content: space-around; margin-top: 20px; }
+        .contact-btn { padding: 10px; border-radius: 10px; text-decoration: none; color: white; font-size: 12px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div id="mainUI" style="display:none;">
+    <header>
+        <button class="back-btn" onclick="goBack()">←</button>
+        <h2 id="displayPageName">MONITIZATION</h2>
+        <i class="fi fi-sr-settings" style="cursor:pointer" onclick="showPage('settingsPage')"></i>
+    </header>
+
+    <div class="container">
+        <div class="balance-box">
+            <small>Total Monitization Money</small>
+            <h1 id="totalMoney">MK0.00</h1>
+            <button class="btn-withdraw" onclick="showPage('withdrawPage')">WITHDRAW</button>
+        </div>
+
+        <div class="section-title">Last 28 days (Page Activity)</div>
+        <div class="card">
+            <div class="stat-row"><span>Posts</span> <b id="st_posts">0</b></div>
+            <div class="stat-row"><span>Comments</span> <b id="st_comments">0</b></div>
+            <div class="stat-row"><span>Likes</span> <b id="st_likes">0</b></div>
+            <div class="stat-row"><span>Share</span> <b id="st_shares">0</b></div>
+        </div>
+
+        <div class="section-title">MEDIA</div>
+        <div class="card">
+            <div class="stat-row"><span>Videos</span> <b id="st_videos">0</b></div>
+            <div class="stat-row"><span>Images</span> <b id="st_images">0</b></div>
+        </div>
+
+        <div class="section-title">WanderSlapp ads</div>
+        <div class="card">
+            <div class="stat-row"><span>Ads Received</span> <b id="st_ads">0</b></div>
+        </div>
+
+        <div class="card" style="text-align: center; border: 2px dashed var(--accent);">
+            <span>You build Community</span> <b id="st_comm" style="color:var(--accent)">0%</b>
+        </div>
+    </div>
+</div>
+
+<div id="regPage" class="overlay-page">
+    <header>
+        <button class="back-btn" onclick="goBack()"><i class="fi fi-sr-arrow-left"></i></button>
+        <h2>Register Page Monitization</h2>
+    </header>
+    <div style="padding:20px;">
+        <div class="form-group">
+            <label>Page Name</label>
+            <input type="text" id="regName" readonly style="background: #e9ecef;">
+        </div>
+        <div class="form-group"><label>Age (d/m/y)</label><input type="text" id="regAge" placeholder="20/05/1998"></div>
+        <div class="form-group"><label>Country</label>
+            <select id="regCountry"><option>MALAWI</option><option>ZAMBIA</option></select>
+        </div>
+        <div class="form-group"><label>Payment Method</label>
+            <select id="regMethod" onchange="togglePay('reg')">
+                <option value="AIRTEL MONEY">AIRTEL MONEY</option>
+                <option value="TNM MPAMBA">TNM MPAMBA</option>
+                <option value="NATIONAL BANK">NATIONAL BANK</option>
+            </select>
+        </div>
+        <div id="reg_pay_inputs">
+            <div class="form-group"><label id="numLabel">Phone Number</label><input type="number" id="regNumber" placeholder="099..."></div>
+            <div class="form-group"><label>Account Name (Lina lomwe limaoneka ku bank/mobile money)</label><input type="text" id="regAccName" placeholder="Isaac Wonderford"></div>
+        </div>
+        <button class="btn-save" onclick="saveReg()">ACTIVATE MONITIZATION</button>
+    </div>
+</div>
+
+<div id="withdrawPage" class="overlay-page">
+    <header><i class="fi fi-sr-arrow-left" onclick="hidePage('withdrawPage')" style="padding:15px; cursor:pointer"></i> <h2>Withdraw</h2></header>
+    <div class="container">
+        <div class="card" style="text-align:center">
+            <small>Available Balance</small>
+            <h2 id="drawBal" style="color:var(--accent)">MK0.00</h2>
+        </div>
+        <div class="form-group"><label>Ndalama zomwe mukufuna kuchotsa</label><input type="number" id="amtToDraw" placeholder="Enter Amount"></div>
+        <button class="btn-save" onclick="doWithdraw()">WITHDRAW</button>
+    </div>
+</div>
+
+<div id="settingsPage" class="overlay-page">
+    <header><i class="fi fi-sr-arrow-left" onclick="hidePage('settingsPage')" style="padding:15px; cursor:pointer"></i> <h2>Settings</h2></header>
+    <div style="padding:20px;">
+        <div class="form-group"><label>Age</label><input type="text" id="setAge"></div>
+        <div class="form-group"><label>Country</label>
+            <select id="setCountry"><option>MALAWI</option><option>ZAMBIA</option></select>
+        </div>
+        <div class="form-group"><label>Payment Method</label>
+            <select id="setMethod" onchange="togglePay('set')">
+                <option value="AIRTEL MONEY">AIRTEL MONEY</option>
+                <option value="TNM MPAMBA">TNM MPAMBA</option>
+                <option value="NATIONAL BANK">NATIONAL BANK</option>
+            </select>
+        </div>
+        <div class="form-group"><label id="setNumLabel">Number</label><input type="number" id="setNumber"></div>
+        <div class="form-group"><label>Account Name</label><input type="text" id="setAccName"></div>
+    </div>
+    <button class="btn-save" onclick="updateSettings()" style="margin: 0 20px; width: calc(100% - 40px);">SAVE CHANGES</button>
+</div>
+
+<div id="popup">
+    <div id="popContent"></div>
+    <div class="contact-box">
+        <a href="mailto:wanderslapp@gmail.com" class="contact-btn" style="background:#ea4335">EMAIL</a>
+        <a href="https://wa.me/265990914737" class="contact-btn" style="background:#25d366">WHATSAPP</a>
+    </div>
+    <button class="btn-save" onclick="location.reload()">OK</button>
+</div>
+
+<script>
+// --- CONFIG & INITIALIZATION ---
+const firebaseConfig = {
+    apiKey: "AIzaSyDt_ayoflnFkRRnS2fXITY2EzJz0KcW5QA",
+    authDomain: "makert-bfb76.firebaseapp.com",
+    databaseURL: "https://makert-bfb76-default-rtdb.firebaseio.com",
+    projectId: "makert-bfb76",
+    storageBucket: "makert-bfb76.firebasestorage.app",
+    messagingSenderId: "245693362931",
+    appId: "1:245693362931:web:e15662a22dd50d2ac63d86"
+};
+firebase.initializeApp(firebaseConfig);
+const rtdb = firebase.database();
+const auth = firebase.auth();
+const fs = firebase.firestore();
+
+// TENGA PAGE ID KUCHOKERA MU URL
+const urlParams = new URLSearchParams(window.location.search);
+const pageID = urlParams.get('pageId');
+
+let myID, myBal = 0, userMonData = null;
+
+if(!pageID) {
+    alert("Error: Page ID is missing!");
+    window.history.back();
+}
+
+auth.onAuthStateChanged(user => {
+    if(user){
+        myID = user.uid;
+        checkStatus();
+    } else {
+        alert("Chonde lowani mu account yanu!");
+    }
+});
+
+function goBack() {
+    if (pageID) {
+        location.href = 'page-dashboard.html?pageId=' + pageID;
+    } else {
+        window.history.back();
+    }
+}
+
+// --- CORE LOGIC ---
+
+function checkStatus() {
+    // Tikuyang'ana ngati Page imeneyi inalembetsedwa kale (pogwiritsa ntchito pageID)
+    rtdb.ref(`monitization_users/${pageID}`).on('value', snap => {
+        if(!snap.exists()){
+            // Ngati palibe, onetsani tsamba lolembetsera
+            document.getElementById("regPage").style.display = "block";
+            document.getElementById("mainUI").style.display = "none";
+            
+            // Tengani dzina la Page kuchokera ku Firestore
+            fs.collection("pages").doc(pageID).get().then(doc => {
+                if(doc.exists) {
+                    document.getElementById("regName").value = doc.data().name;
+                } else {
+                    document.getElementById("regName").value = "Unknown Page";
+                }
+            });
+        } else {
+            // Ngati inalembetsedwa kale
+            userMonData = snap.val();
+            document.getElementById("regPage").style.display = "none";
+            document.getElementById("mainUI").style.display = "block";
+            document.getElementById("displayPageName").innerText = userMonData.pageName || "MONITIZATION";
+            loadRealtimeStats();
+        }
+    });
+}
+
+function loadRealtimeStats() {
+    // Werengani zochitika za Page mu Realtime Database
+    rtdb.ref(`monit_stats/${pageID}`).on('value', snap => {
+        const d = snap.val() || {};
+        document.getElementById("st_posts").innerText = d.posts || 0;
+        document.getElementById("st_comments").innerText = d.comments || 0;
+        document.getElementById("st_likes").innerText = d.likes || 0;
+        document.getElementById("st_shares").innerText = d.shares || 0;
+        document.getElementById("st_videos").innerText = d.videos || 0;
+        document.getElementById("st_images").innerText = d.images || 0;
+        document.getElementById("st_ads").innerText = (d.ads_image_views || 0) + (d.ads_video_views || 0);
+        
+        // MAWERENGEDWE A NDALAMA
+        let money = (d.likes || 0) * 1.50 + (d.comments || 0) * 2.50 + (d.shares || 0) * 1.00;
+        money += (d.ads_image_views || 0) * 5.00 + (d.ads_video_views || 0) * 10.00;
+        
+        let comm = d.build_community || 0;
+        money += Math.floor(comm / 5) * 5;
+        
+        let adjustment = d.admin_adjustment || 0;
+        myBal = (money + adjustment) - (d.total_withdrawn || 0);
+
+        document.getElementById("totalMoney").innerText = `MK${myBal.toFixed(2)}`;
+        document.getElementById("drawBal").innerText = `MK${myBal.toFixed(2)}`;
+        document.getElementById("st_comm").innerText = comm + "%";
+    });
+}
+
+function togglePay(mode) {
+    const method = document.getElementById(mode === 'reg' ? 'regMethod' : 'setMethod').value;
+    const label = document.getElementById(mode === 'reg' ? 'numLabel' : 'setNumLabel');
+    label.innerText = method === "NATIONAL BANK" ? "Bank Account Number" : "Phone Number";
+}
+
+function saveReg() {
+    const data = {
+        pageName: document.getElementById("regName").value,
+        ownerID: myID,
+        pageID: pageID,
+        age: document.getElementById("regAge").value,
+        country: document.getElementById("regCountry").value,
+        method: document.getElementById("regMethod").value,
+        payNumber: document.getElementById("regNumber").value,
+        payAccName: document.getElementById("regAccName").value,
+        status: "active",
+        dateRegistered: new Date().toISOString()
+    };
+
+    if(!data.payNumber || !data.payAccName || !data.age) return alert("Chonde lembani zofunika zonse!");
+
+    rtdb.ref(`monitization_users/${pageID}`).set(data).then(() => {
+        alert("Registration ya " + data.pageName + " yapambana!");
+    });
+}
+
+function updateSettings() {
+    const data = {
+        age: document.getElementById("setAge").value,
+        country: document.getElementById("setCountry").value,
+        method: document.getElementById("setMethod").value,
+        payNumber: document.getElementById("setNumber").value,
+        payAccName: document.getElementById("setAccName").value
+    };
+    rtdb.ref(`monitization_users/${pageID}`).update(data).then(() => {
+        alert("Zasintha bwino!");
+        hidePage('settingsPage');
+    });
+}
+
+function doWithdraw() {
+    const amt = parseFloat(document.getElementById("amtToDraw").value);
+    
+    if(isNaN(amt) || amt < 1000) return alert("Withdraw yayambira MK1,000.");
+    if(amt > myBal) return alert("Ndalama zomwe mukufuna kuchotsa ndizambiri kuposa zomwe muli nazo!");
+    
+    const request = {
+        pageId: pageID,
+        pageName: userMonData.pageName,
+        amount: amt,
+        date: new Date().toLocaleString(),
+        paymentDetails: {
+            method: userMonData.method,
+            number: userMonData.payNumber,
+            name: userMonData.payAccName
+        }
+    };
+
+    // Sungani request ya withdraw
+    rtdb.ref(`withdraw_history/${pageID}`).push(request);
+    // Onjezani pa total_withdrawn mu stats
+    rtdb.ref(`monit_stats/${pageID}/total_withdrawn`).transaction(c => (c || 0) + amt);
+
+    document.getElementById("popContent").innerHTML = `
+        <h2 style="color:var(--accent)">MK${amt} Zapemphedwa!</h2>
+        <p>Ndalama zitumizidwa ku: <b>${userMonData.method} (${userMonData.payNumber})</b></p>
+        <p style="font-size:11px;">Dikirani nthawi yosadutsa 24hr kuti ndalama zifike.<br>Ngati pali vuto, lankhulani nafe.</p>
+    `;
+    document.getElementById("popup").style.display = "block";
+}
+
+function showPage(id) { 
+    document.getElementById(id).style.display = "block"; 
+    if(id === 'settingsPage' && userMonData) {
+        document.getElementById("setAge").value = userMonData.age || "";
+        document.getElementById("setCountry").value = userMonData.country || "MALAWI";
+        document.getElementById("setMethod").value = userMonData.method || "AIRTEL MONEY";
+        document.getElementById("setNumber").value = userMonData.payNumber || "";
+        document.getElementById("setAccName").value = userMonData.payAccName || "";
+        togglePay('set');
+    }
+}
+
+function hidePage(id) { document.getElementById(id).style.display = "none"; }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="ny">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comments</title>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
+    
+    <script src="send-notf.js"></script>
+
+    <link rel='stylesheet' href='https://cdn-uicons.flaticon.com/uicons-solid-rounded/css/uicons-solid-rounded.css'>
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; margin: 0; background: #fff; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        .header { padding: 15px; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 15px; background: #0a2b4f; color: white; z-index: 100; }
+        .back-btn { cursor: pointer; font-size: 20px; display: flex; align-items: center; }
+        .list-area { flex: 1; overflow-y: auto; padding: 15px; background: #f0f2f5; scroll-behavior: smooth; }
+        .item { display: flex; gap: 10px; margin-bottom: 15px; align-items: flex-start; }
+        .item img { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; background: #ddd; }
+        .bubble { background: white; padding: 10px 14px; border-radius: 18px; flex: 1; box-shadow: 0 1px 2px rgba(0,0,0,0.08); position: relative; }
+        .bubble b { font-size: 14px; color: #0a2b4f; display: block; margin-bottom: 2px; }
+        .time-text { font-size: 11px; color: #65676b; margin-bottom: 4px; display: block; }
+        .text { font-size: 14.5px; line-height: 1.4; color: #1c1e21; word-break: break-all; }
+        .text a { color: #0064e0; text-decoration: none; font-weight: bold; }
+        .comment-actions { display: flex; gap: 20px; margin-top: 8px; padding-left: 5px; }
+        .action-item { font-size: 13px; font-weight: bold; color: #65676b; cursor: pointer; display: flex; align-items: center; gap: 5px; }
+        .action-item i { font-size: 16px; }
+        .liked { color: #0a2b4f !important; }
+        .input-area { padding: 10px 15px; border-top: 1px solid #eee; display: flex; gap: 10px; background: white; align-items: center; padding-bottom: env(safe-area-inset-bottom, 15px); }
+        .input-area input { flex: 1; padding: 12px 15px; border-radius: 22px; border: 1px solid #ddd; outline: none; background: #f0f2f5; font-size: 15px; }
+        .send-btn { background: #0a2b4f; color: white; border: none; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        #replyOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 200; flex-direction: column; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div class="back-btn" onclick="closeMe()"><i class="fi fi-sr-arrow-left"></i></div>
+    <b>Comments</b>
+</div>
+
+<div class="list-area" id="commentContainer">
+    <div style="text-align:center; padding:20px; color:#888;">Loading comment...</div>
+</div>
+
+<div class="input-area">
+    <input type="text" id="commentInput" placeholder="comment...">
+    <button class="send-btn" onclick="sendComment()"><i class="fi fi-sr-paper-plane"></i></button>
+</div>
+
+<div id="replyOverlay">
+    <div class="header" style="background:#05192e;">
+        <div class="back-btn" onclick="closeReply()"><i class="fi fi-sr-arrow-left"></i></div>
+        <b>Replies</b>
+    </div>
+    <div class="list-area" id="replyContainer"></div>
+    <div class="input-area">
+        <input type="text" id="replyInput" placeholder="Reply...">
+        <button class="send-btn" onclick="sendReply()" style="background:#05192e;"><i class="fi fi-sr-paper-plane"></i></button>
+    </div>
+</div>
+
+<script>
+const firebaseConfig = {
+    apiKey: "AIzaSyDt_ayoflnFkRRnS2fXITY2EzJz0KcW5QA",
+    authDomain: "makert-bfb76.firebaseapp.com",
+    databaseURL: "https://makert-bfb76-default-rtdb.firebaseio.com",
+    projectId: "makert-bfb76",
+    storageBucket: "makert-bfb76.firebasestorage.app",
+    messagingSenderId: "245693362931",
+    appId: "1:245693362931:web:e15662a22dd50d2ac63d86"
+};
+firebase.initializeApp(firebaseConfig);
+const rtdb = firebase.database();
+const db = firebase.firestore();
+const auth = firebase.auth();
+
+const urlParams = new URLSearchParams(window.location.search);
+const activePID = urlParams.get('pid');
+const postOwnerID = urlParams.get('owner'); 
+
+let myID, myName, myPhoto, activeCID, activeCOwner;
+
+auth.onAuthStateChanged(user => {
+    if(user) {
+        myID = user.uid;
+        db.collection("users").doc(myID).get().then(doc => {
+            if(doc.exists) { 
+                myName = doc.data().fullName || "WanderSlapp User"; 
+                myPhoto = doc.data().profilePhoto || "https://i.ibb.co/7z5nDqK/avatar.png"; 
+            }
+        });
+        loadComments();
+    }
+});
+
+function timeAgo(ts) {
+    if(!ts) return "now";
+    const s = Math.floor((new Date() - new Date(ts)) / 1000);
+    if (s < 60) return "now";
+    if (s < 3600) return Math.floor(s/60) + "m";
+    if (s < 86400) return Math.floor(s/3600) + "h";
+    return Math.floor(s/86400) + "d";
+}
+
+function linkify(text) {
+    if(!text) return "";
+    
+    // 1. Ma URL a mwachizolowezi
+    let t = text.replace(/(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig, '<a href="$1" target="_blank">$1</a>');
+    
+    // 2. MA MENTIONS (@isaac wonderford)
+    // Izi tsopano zizitenga mawu onse pambuyo pa @ mpaka itakumana ndi chizindikiro monga , . ! kapena Enter.
+    t = t.replace(/@([^,.!?;:\n\r]+)/g, (match, name) => {
+        let trimmedName = name.trim();
+        return `<a href="seach.html?q=${encodeURIComponent(trimmedName)}" target="_top">@${trimmedName}</a>`;
+    });
+
+    // 3. MA HASHTAGS (#khani)
+    t = t.replace(/#(\w+)/g, (match, tag) => {
+        return `<a href="seach.html?q=%23${tag}" target="_top">#${tag}</a>`;
+    });
+
+    return t;
+}
+
+function loadComments() {
+    rtdb.ref(`postStats/${activePID}/comments`).on('value', snap => {
+        const container = document.getElementById("commentContainer");
+        container.innerHTML = "";
+        if(!snap.exists()) {
+             container.innerHTML = `<div style="text-align:center; padding:40px; color:#888;">No comment.</div>`;
+             return;
+        }
+        snap.forEach(child => {
+            const c = child.val();
+            const cid = child.key;
+            const likeCount = c.likes ? Object.keys(c.likes).length : 0;
+            const isLiked = c.likes && c.likes[myID] ? 'liked' : '';
+            const replyCount = c.replies ? Object.keys(c.replies).length : 0;
+
+            container.innerHTML += `
+                <div class="item">
+                    <img src="${c.photo || 'https://i.ibb.co/7z5nDqK/avatar.png'}">
+                    <div class="bubble">
+                        <b>${c.name || 'User'}</b>
+                        <span class="time-text">${timeAgo(c.timestamp)}</span>
+                        <div class="text">${linkify(c.text || '')}</div>
+                        <div class="comment-actions">
+                            <div class="action-item ${isLiked}" onclick="toggleCommentLike('${cid}', '${c.uid}')">
+                                <i class="fi fi-sr-thumbs-up"></i> <span>${likeCount}</span>
+                            </div>
+                            <div class="action-item" onclick="openReplies('${cid}', '${c.uid}')">
+                                <i class="fi fi-sr-comment-dots"></i> <span>Reply (${replyCount})</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+        });
+        container.scrollTop = container.scrollHeight;
+    });
+}
+
+function sendComment() {
+    const inp = document.getElementById("commentInput");
+    const val = inp.value.trim();
+    if(!val) return;
+
+    // KONZANI DATA: Onetsetsani kuti palibe UNDEFINED
+    const cData = {
+        uid: myID,
+        name: myName || "User",
+        photo: myPhoto || "https://i.ibb.co/7z5nDqK/avatar.png",
+        text: val,
+        timestamp: Date.now()
+    };
+
+    rtdb.ref(`postStats/${activePID}/comments`).push(cData).then(() => {
+         
+        // --- MZERE WAWATSOPANO NDI UWU ---
+        // Uzani monitization engine (monitaize.js) kuti onjezerani ma %
+        if (myID !== postOwnerID) {
+            window.parent.postMessage({ type: 'COMMUNITY_GROW', action: 'comment' }, '*');
+        }
+        // ---------------------------------
+
+        // ITANANI SMART NOTIFICATION
+        if (typeof sendSmartNotification === 'function') {
+            sendSmartNotification(postOwnerID, 'comment', activePID);
+        }
+    });
+
+    inp.value = "";
+}
+
+function toggleCommentLike(cid, commentOwner) {
+    const ref = rtdb.ref(`postStats/${activePID}/comments/${cid}/likes/${myID}`);
+    ref.once('value', s => {
+        if(s.exists()) {
+            ref.remove();
+        } else {
+            ref.set(true).then(() => {
+                // NOTIFICATION YA LIKE PA COMMENT
+                if (typeof sendSmartNotification === 'function') {
+                    sendSmartNotification(commentOwner, 'like', activePID);
+                }
+            });
+        }
+    });
+}
+
+function openReplies(cid, cOwner) {
+    activeCID = cid;
+    activeCOwner = cOwner;
+    document.getElementById("replyOverlay").style.display = "flex";
+    rtdb.ref(`postStats/${activePID}/comments/${cid}/replies`).on('value', snap => {
+        const container = document.getElementById("replyContainer");
+        container.innerHTML = "";
+        snap.forEach(child => {
+            const r = child.val();
+            container.innerHTML += `
+                <div class="item">
+                    <img src="${r.photo || 'https://i.ibb.co/7z5nDqK/avatar.png'}">
+                    <div class="bubble">
+                        <b>${r.name || 'User'}</b>
+                        <span class="time-text">${timeAgo(r.timestamp)}</span>
+                        <div class="text">${linkify(r.text || '')}</div>
+                    </div>
+                </div>`;
+        });
+    });
+}
+
+function sendReply() {
+    const inp = document.getElementById("replyInput");
+    const val = inp.value.trim();
+    if(!val) return;
+
+    const rData = {
+        uid: myID,
+        name: myName || "User",
+        photo: myPhoto || "https://i.ibb.co/7z5nDqK/avatar.png",
+        text: val,
+        timestamp: Date.now()
+    };
+
+    rtdb.ref(`postStats/${activePID}/comments/${activeCID}/replies`).push(rData).then(() => {
+        // NOTIFICATION YA REPLY
+        if (typeof sendSmartNotification === 'function') {
+            sendSmartNotification(activeCOwner, 'comment', activePID);
+        }
+    });
+
+    inp.value = "";
+}
+
+function closeReply() { document.getElementById("replyOverlay").style.display = "none"; }
+function closeMe() { window.parent.postMessage({ type: "CLOSE_COMMENTS" }, "*"); }
+</script>
+<script src="app-engine.js"></script> 
+</body>
+</html>

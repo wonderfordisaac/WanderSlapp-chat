@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="ny">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WanderSlapp Groups Pro</title>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
+    <link rel='stylesheet' href='https://cdn-uicons.flaticon.com/uicons-solid-rounded/css/uicons-solid-rounded.css'>
+
+    <style>
+        :root { --main: #0a2b4f; --green: #28a745; --bg: #f0f2f5; --white: #ffffff; }
+        body { font-family: system-ui; margin: 0; background: var(--bg); color: #1c1e21; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
+        
+        /* HEADER NDI BACK BUTTON */
+        header { 
+            background: var(--main); 
+            color: white; 
+            padding: 15px; 
+            display: flex; 
+            align-items: center; 
+            font-weight: bold; 
+            flex-shrink: 0; 
+        }
+        .back-link { 
+            color: white; 
+            text-decoration: none; 
+            font-size: 20px; 
+            display: flex; 
+            align-items: center; 
+            margin-right: 15px;
+        }
+        .header-title { flex: 1; text-align: center; margin-right: 35px; }
+
+        /* SEARCH BAR STYLE */
+        .search-container { background: white; padding: 10px; border-bottom: 1px solid #ddd; }
+        .search-box { display: flex; align-items: center; background: #f0f2f5; border-radius: 20px; padding: 8px 15px; gap: 10px; }
+        .search-box input { border: none; background: transparent; outline: none; flex: 1; font-size: 14px; }
+        .search-box i { color: #666; }
+        .no-result { text-align: center; padding: 20px; color: #777; font-size: 14px; display: none; }
+
+        .my-groups-wrapper { background: white; padding: 10px; border-bottom: 1px solid #ddd; overflow-x: auto; white-space: nowrap; display: flex; gap: 15px; flex-shrink: 0; }
+        .my-groups-wrapper::-webkit-scrollbar { display: none; }
+        .my-group-item { text-align: center; min-width: 70px; cursor: pointer; }
+        .my-group-item img { width: 55px; height: 55px; border-radius: 15px; object-fit: cover; border: 2px solid var(--green); }
+        .my-group-item span { font-size: 11px; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+        .main-content { flex: 1; overflow-y: auto; padding-bottom: 20px; }
+        .create-btn-area { padding: 15px; text-align: center; }
+        .btn-create { background: var(--main); color: white; border: none; padding: 12px 25px; border-radius: 25px; font-weight: bold; cursor: pointer; }
+
+        .group-card { background: white; margin: 8px 10px; border-radius: 12px; display: flex; align-items: center; padding: 10px; gap: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .profile-img-list { width: 55px; height: 55px; border-radius: 50%; object-fit: cover; background: #ccc; cursor: pointer; flex-shrink: 0; }
+        .group-info { flex: 1; display: flex; justify-content: space-between; align-items: center; }
+        .group-name b { font-size: 16px; color: var(--main); display: block; }
+        .group-name small { font-size: 11px; color: #666; }
+        
+        .join-btn { padding: 8px 20px; border-radius: 20px; border: none; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 5px; }
+        .spinner { width: 14px; height: 14px; border: 2px solid white; border-top: 2px solid transparent; border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        #imgOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 9999; justify-content: center; align-items: center; }
+        #imgOverlay img { max-width: 95%; max-height: 80%; border-radius: 5px; }
+        .close-full { position: absolute; top: 20px; right: 20px; font-size: 35px; color: white; cursor: pointer; z-index: 10000; }
+
+        #loaderOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); z-index: 10001; justify-content: center; align-items: center; flex-direction: column; }
+        .upload-anim { width: 50px; height: 50px; border: 5px solid #ccc; border-top: 5px solid var(--main); border-radius: 50%; animation: spin 1s linear infinite; }
+
+        .admin-popup { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 5000; }
+        .admin-box { position: absolute; bottom: 0; width: 100%; background: white; border-radius: 20px 20px 0 0; padding: 20px; box-sizing: border-box; }
+        .admin-opt { width: 100%; padding: 15px; border: none; background: #f8f9fa; margin-bottom: 10px; border-radius: 12px; font-weight: bold; text-align: left; font-size: 16px; }
+
+        #groupInside { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 3000; flex-direction: column; }
+        #postFeed { flex: 1; overflow-y: auto; padding: 10px; background: #e5ddd5; display: flex; flex-direction: column; gap: 10px; }
+        .group-header { background: var(--main); color: white; padding: 10px; display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+        .group-header img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 1px solid white; }
+        
+        .group-footer { background: white; padding: 10px; display: flex; align-items: flex-end; gap: 10px; border-top: 1px solid #ddd; position: relative; }
+        .group-footer textarea { flex: 1; border: 1px solid #ddd; border-radius: 20px; padding: 12px 15px; resize: none; max-height: 100px; font-family: inherit; font-size: 15px; outline: none; }
+        .icon-btn { font-size: 28px; color: var(--main); cursor: pointer; border: none; background: none; display: flex; align-items: center; justify-content: center; min-width: 45px; min-height: 45px; }
+        
+        .msg-bubble { background: white; padding: 10px; border-radius: 10px; max-width: 80%; align-self: flex-start; box-shadow: 0 1px 2px rgba(0,0,0,0.1); position: relative; cursor: pointer; }
+        .msg-bubble.mine { background: #dcf8c6; align-self: flex-end; }
+        
+        .msg-media { width: 120px; height: 120px; object-fit: cover; border-radius: 8px; margin-top: 5px; border: 1px solid #ddd; }
+        .video-msg { width: 200px; border-radius: 8px; }
+        
+        .reply-box { font-size: 11px; background: rgba(0,0,0,0.05); padding: 5px; border-radius: 5px; border-left: 3px solid var(--main); margin-bottom: 5px; }
+        .full-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 4000; padding: 20px; overflow-y: auto; box-sizing: border-box; }
+        .recording { color: red; animation: blink 1s infinite; }
+        @keyframes blink { 50% { opacity: 0; } }
+    </style>
+</head>
+<body>
+
+<div id="loaderOverlay">
+    <div class="upload-anim"></div>
+    <b style="margin-top:10px; color:var(--main)">Uploading...</b>
+</div>
+
+<div id="imgOverlay">
+    <span class="close-full" onclick="document.getElementById('imgOverlay').style.display='none'">&times;</span>
+    <img id="fullImg" src="">
+</div>
+
+<div id="msgOptions" class="admin-popup" onclick="this.style.display='none'">
+    <div class="admin-box" onclick="event.stopPropagation()">
+        <button class="admin-opt" onclick="setReply()">1. Reply</button>
+        <button class="admin-opt" onclick="deleteLocal()">2. Delete (for me)</button>
+    </div>
+</div>
+
+<div id="adminPop" class="admin-popup" onclick="this.style.display='none'">
+    <div class="admin-box" onclick="event.stopPropagation()">
+        <h3 id="popGName" style="margin-top:0">Options</h3>
+        <button class="admin-opt" onclick="enterFromPop()">1. View Group</button>
+        <button class="admin-opt" onclick="location.href='manage-group.html?id='+activeGID">2. Manage Group</button>
+        <button class="admin-opt" onclick="location.href='edite-group.html?id='+activeGID">3. Edit Group Info</button>
+    </div>
+</div>
+
+<header>
+    <button class="back-btn" onclick="goBack()">←</button>
+    <div class="header-title">WanderSlapp Groups</div>
+</header>
+
+<div class="search-container">
+    <div class="search-box">
+        <i class="fi fi-sr-search"></i>
+        <input type="text" id="groupSearchInput" placeholder="SEARCH Group..." oninput="filterGroups()">
+    </div>
+</div>
+
+<div class="main-content">
+    <div id="myGroupsLine" class="my-groups-wrapper"></div>
+    <div class="create-btn-area">
+        <button class="btn-create" onclick="openOverlay('createFormOverlay')">Create New Group</button>
+    </div>
+    <div id="allGroupsList"></div>
+    <div id="noGroupMsg" class="no-result">No Group with this Name here</div>
+</div>
+
+<div id="createFormOverlay" class="full-overlay">
+    <i class="fi fi-sr-arrow-left" onclick="closeAll()"></i>
+    <h2 style="text-align:center">Create Group</h2>
+    <div style="display:flex; gap:10px; margin-bottom:20px;">
+        <button class="btn-create" id="pubBtn" style="flex:1" onclick="setGType('public')">Public</button>
+        <button class="btn-create" id="privBtn" style="flex:1; background:#666;" onclick="setGType('private')">Private</button>
+    </div>
+    <div id="formFields">
+        <input type="text" id="gName" placeholder="Group Name" style="width:100%; padding:12px; margin-bottom:15px; border:1px solid #ddd; border-radius:8px;">
+        <input type="file" id="gCoverFile" accept="image/*" style="margin-bottom:15px;">
+        <p>Categories:</p>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+            <label><input type="checkbox" class="gCat" value="Education"> Education</label>
+            <label><input type="checkbox" class="gCat" value="Chating"> Chating</label>
+            <label><input type="checkbox" class="gCat" value="Business"> Business</label>
+            <label><input type="checkbox" id="otherCheck" onchange="toggleOther()"> Others</label>
+        </div>
+        <input type="text" id="otherCatInput" placeholder="Specify..." style="display:none; width:100%; padding:10px; margin-top:10px;">
+        <button class="btn-create" style="width:100%; margin-top:20px;" id="createFinalBtn" onclick="processCreateGroup()">CREATE NOW</button>
+    </div>
+</div>
+
+<div id="groupInside">
+    <div class="group-header">
+        <i class="fi fi-sr-arrow-left" onclick="closeAll()"></i>
+        <img id="activeGCover" src="" onclick="showImg(this.src)">
+        <div style="flex:1">
+            <b id="activeGName" style="display:block">Group Name</b>
+            <small id="activeGSub" style="font-size:10px; opacity:0.8">Category • 0 members</small>
+        </div>
+        <i class="fi fi-sr-menu-dots-vertical" id="adminIconInside" style="display:none;" onclick="openAdminPanelFromInside()"></i>
+    </div>
+    <div id="postFeed"></div>
+    <div class="group-footer">
+        <button class="icon-btn" id="attachBtn" onclick="document.getElementById('postFile').click()"><i class="fi fi-sr-add-document"></i></button>
+        <input type="file" id="postFile" hidden accept="image/*,video/*">
+        <div style="flex:1; display:flex; flex-direction:column;">
+            <div id="replyPreview" style="display:none; background:#eee; padding:5px; border-radius:10px 10px 0 0; font-size:10px; border-left:3px solid var(--main);">
+                Replying to: <span id="replyText"></span> <i class="fi fi-sr-cross-small" style="float:right" onclick="cancelReply()"></i>
+            </div>
+            <textarea id="postText" placeholder="Lembani..." oninput="updateSendBtn()" rows="1"></textarea>
+        </div>
+        <button class="icon-btn" id="actionBtn" onclick="handleAction()"><i class="fi fi-sr-microphone"></i></button>
+    </div>
+</div>
+
+<script>
+    // --- CHOYAMBA: TENGA PAGE ID KUCHOKERA MU URL ---
+const urlParams = new URLSearchParams(window.location.search);
+const pageID = urlParams.get('pageId');
+
+function goBack() {
+    if (pageID) {
+        location.href = 'page-dashboard.html?pageId=' + pageID;
+    } else {
+        // Ngati palibe ID, bwererani komwe mwachokera
+        window.history.back();
+    }
+}
+
+const firebaseConfig = {
+    apiKey: "AIzaSyDt_ayoflnFkRRnS2fXITY2EzJz0KcW5QA",
+    authDomain: "makert-bfb76.firebaseapp.com",
+    databaseURL: "https://makert-bfb76-default-rtdb.firebaseio.com",
+    projectId: "makert-bfb76",
+    storageBucket: "makert-bfb76.firebasestorage.app",
+    messagingSenderId: "245693362931",
+    appId: "1:245693362931:web:e15662a22dd50d2ac63d86"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore(), rtdb = firebase.database(), auth = firebase.auth();
+
+const IMGBB_API = "a33a7482d0bd04a8c8fdf739bd4e8007";
+const CLOUD_NAME = "dmu7ctilf", CLOUD_PRESET = "WanderSlapp";
+const GAS_URL = "https://script.google.com/macros/s/AKfycby7X-vV7X3QY-JvE6L6q-7-m-7Y-7Y/exec";
+
+let myID, myData, currentGType = 'public', activeGID = null, activeGAdmin = null;
+let mediaRecorder, audioChunks = [], selectedMsg = null, replyData = null;
+
+auth.onAuthStateChanged(user => {
+    if(user) {
+        myID = user.uid;
+        db.collection("users").doc(myID).onSnapshot(doc => { myData = doc.data(); });
+        loadGroups();
+    }
+});
+
+function filterGroups() {
+    let input = document.getElementById('groupSearchInput').value.toLowerCase();
+    let cards = document.getElementsByClassName('group-card');
+    let hasMatch = false;
+    for (let i = 0; i < cards.length; i++) {
+        let name = cards[i].querySelector('.group-name b').innerText.toLowerCase();
+        if (name.includes(input)) {
+            cards[i].style.display = "flex";
+            hasMatch = true;
+        } else {
+            cards[i].style.display = "none";
+        }
+    }
+    document.getElementById('noGroupMsg').style.display = hasMatch ? "none" : "block";
+}
+
+function openOverlay(id) { document.getElementById(id).style.display = 'block'; }
+function closeAll() { document.querySelectorAll('.full-overlay, #groupInside').forEach(el => el.style.display = 'none'); cancelReply(); }
+function setGType(t) { 
+    currentGType = t;
+    document.getElementById('pubBtn').style.background = (t==='public') ? 'var(--main)' : '#666';
+    document.getElementById('privBtn').style.background = (t==='private') ? 'var(--main)' : '#666';
+}
+function toggleOther() { document.getElementById('otherCatInput').style.display = document.getElementById('otherCheck').checked ? 'block' : 'none'; }
+function showImg(src) { document.getElementById('fullImg').src = src; document.getElementById('imgOverlay').style.display = 'flex'; }
+function showLoader(s) { document.getElementById('loaderOverlay').style.display = s ? 'flex' : 'none'; }
+
+async function uploadToImgBB(file) {
+    let formData = new FormData(); formData.append("image", file);
+    let res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API}`, { method: "POST", body: formData });
+    let data = await res.json(); return data.data.url;
+}
+async function uploadToCloudinary(file) {
+    let formData = new FormData(); formData.append("file", file); formData.append("upload_preset", CLOUD_PRESET);
+    let res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/video/upload`, { method: "POST", body: formData });
+    let data = await res.json(); return data.secure_url;
+}
+
+async function processCreateGroup() {
+    const btn = document.getElementById('createFinalBtn');
+    const name = document.getElementById('gName').value, file = document.getElementById('gCoverFile').files[0];
+    if(!name || !file) return alert("Fill all!");
+    btn.innerText = "Uploading..."; btn.disabled = true;
+    try {
+        const url = await uploadToImgBB(file);
+        const cats = Array.from(document.querySelectorAll('.gCat:checked')).map(cb => cb.value);
+        if(document.getElementById('otherCheck').checked) cats.push(document.getElementById('otherCatInput').value);
+        await db.collection("groups").add({ name, coverUrl: url, categories: cats.join(", "), type: currentGType, adminID: myID, members: [myID], memberCount: 1, createdAt: Date.now() });
+        closeAll();
+    } catch(e) { alert("Error!"); }
+    btn.innerText = "CREATE NOW"; btn.disabled = false;
+}
+
+function loadGroups() {
+    db.collection("groups").where("members", "array-contains", myID).onSnapshot(snap => {
+        const line = document.getElementById('myGroupsLine'); line.innerHTML = "";
+        snap.forEach(doc => {
+            let g = doc.data();
+            line.innerHTML += `<div class="my-group-item" onclick="handleGroupClick('${doc.id}', '${g.name}', '${g.adminID}')">
+                <img src="${g.coverUrl}"><span>${g.name}</span></div>`;
+        });
+    });
+
+    db.collection("groups").onSnapshot(snap => {
+        const list = document.getElementById('allGroupsList'); list.innerHTML = "";
+        snap.forEach(doc => {
+            let g = doc.data(); let isMember = g.members.includes(myID);
+            list.innerHTML += `<div class="group-card">
+                <img src="${g.coverUrl}" class="profile-img-list" onclick="showImg('${g.coverUrl}')">
+                <div class="group-info">
+                    <div class="group-name" onclick="handleGroupClick('${doc.id}', '${g.name}', '${g.adminID}')">
+                        <b>${g.name}</b>
+                        <small>${g.categories || g.type} • ${g.members.length} members</small>
+                    </div>
+                    <button class="join-btn" id="join-${doc.id}" style="background:${isMember?'#0a2b4f':'#28a745'}; color:white;" 
+                        onclick="joinLogic('${doc.id}', '${g.type}', '${g.adminID}', ${isMember}, '${g.name}')">
+                        ${isMember ? 'VIEW' : 'JOIN'}
+                    </button>
+                </div>
+            </div>`;
+        });
+        filterGroups();
+    });
+}
+
+function handleGroupClick(id, name, adminID) {
+    activeGID = id; activeGAdmin = adminID;
+    if(adminID === myID) {
+        document.getElementById('popGName').innerText = name;
+        document.getElementById('adminPop').style.display = 'block';
+    } else { 
+        db.collection("groups").doc(id).get().then(doc => {
+            if(doc.data().members.includes(myID)) enterGroup(id, name, adminID);
+        });
+    }
+}
+
+function enterFromPop() { document.getElementById('adminPop').style.display = 'none'; enterGroup(activeGID, document.getElementById('popGName').innerText, myID); }
+function openAdminPanelFromInside() { handleGroupClick(activeGID, document.getElementById('activeGName').innerText, activeGAdmin); }
+
+function joinLogic(gid, type, adminID, isMember, name) {
+    if(isMember) return enterGroup(gid, name, adminID);
+    if(type === 'private') {
+        db.collection("users").doc(adminID).get().then(doc => { 
+            alert("YOU CAN'T JOIN: This Group is private! talk with Admin to add you: " + (doc.exists ? doc.data().fullName : "Admin")); 
+        });
+        return;
+    }
+    const btn = document.getElementById(`join-${gid}`);
+    btn.innerHTML = `<div class="spinner"></div> Wait...`; btn.disabled = true;
+    setTimeout(() => {
+        db.collection("groups").doc(gid).update({ 
+            members: firebase.firestore.FieldValue.arrayUnion(myID), 
+            memberCount: firebase.firestore.FieldValue.increment(1) 
+        }).then(() => enterGroup(gid, name, adminID));
+    }, 3000);
+}
+
+function enterGroup(gid, name, adminID) {
+    activeGID = gid; activeGAdmin = adminID;
+    document.getElementById('activeGName').innerText = name;
+    document.getElementById('groupInside').style.display = 'flex';
+    document.getElementById('adminIconInside').style.display = (adminID === myID) ? 'block' : 'none';
+    db.collection("groups").doc(gid).get().then(doc => {
+        let g = doc.data();
+        document.getElementById('activeGCover').src = g.coverUrl;
+        document.getElementById('activeGSub').innerText = `${g.categories} • ${g.members.length} members`;
+    });
+    checkPermissions(); 
+    loadPosts(gid);
+}
+
+function checkPermissions() {
+    const postInput = document.getElementById('postText');
+    const actionBtn = document.getElementById('actionBtn');
+    const attachBtn = document.getElementById('attachBtn');
+    db.collection("groups").doc(activeGID).onSnapshot(async doc => {
+        const g = doc.data();
+        const isAdmin = g.adminID === myID || (g.admins && g.admins.includes(myID));
+        if(g.settings && g.settings.adminOnly && !isAdmin) {
+            postInput.placeholder = "Admins only can post...";
+            postInput.disabled = true; actionBtn.disabled = true;
+            attachBtn.style.opacity = "0.3"; attachBtn.onclick = null;
+            return;
+        }
+        const muteDoc = await db.collection("groups").doc(activeGID).collection("mutedUsers").doc(myID).get();
+        if(muteDoc.exists) {
+            const timeLeft = muteDoc.data().mutedUntil - Date.now();
+            if(timeLeft > 0) {
+                let mins = Math.ceil(timeLeft / (1000 * 60));
+                postInput.placeholder = `Muted (Remaining: ${mins}m)`;
+                postInput.disabled = true; actionBtn.disabled = true;
+                attachBtn.style.opacity = "0.3"; attachBtn.onclick = null;
+                return;
+            }
+        }
+        postInput.placeholder = "post...";
+        postInput.disabled = false; actionBtn.disabled = false;
+        attachBtn.style.opacity = "1";
+        attachBtn.onclick = () => document.getElementById('postFile').click();
+    });
+}
+
+function loadPosts(gid) {
+    rtdb.ref(`groupPosts/${gid}`).on('value', snap => {
+        const feed = document.getElementById('postFeed'); feed.innerHTML = "";
+        snap.forEach(child => {
+            let p = child.val(); let isM = p.uid === myID;
+            let msgId = child.key;
+            let replyHtml = p.replyTo ? `<div class="reply-box"><b>${p.replyTo.name}:</b> ${p.replyTo.text}</div>` : '';
+            let media = p.type === 'image' ? `<img src="${p.url}" class="msg-media" onclick="showImg('${p.url}')">` : 
+                        p.type === 'video' ? `<video src="${p.url}" class="video-msg" controls></video>` :
+                        p.type === 'audio' ? `<audio src="${p.url}" controls style="width:100%"></audio>` : '';
+            feed.innerHTML += `
+                <div class="msg-bubble ${isM?'mine':''}" onclick="openMsgOptions('${msgId}', '${p.name}', '${p.text || '[Media]'}')">
+                    <small style="color:var(--green); font-weight:bold;">${p.name}</small>
+                    ${replyHtml}
+                    <div>${p.text||''}</div>
+                    ${media}
+                </div>`;
+        });
+        feed.scrollTop = feed.scrollHeight;
+    });
+}
+
+function openMsgOptions(id, name, text) {
+    selectedMsg = { id, name, text };
+    document.getElementById('msgOptions').style.display = 'block';
+}
+
+function setReply() {
+    replyData = selectedMsg;
+    document.getElementById('replyPreview').style.display = 'block';
+    document.getElementById('replyText').innerText = selectedMsg.text;
+    document.getElementById('msgOptions').style.display = 'none';
+    document.getElementById('postText').focus();
+}
+
+function cancelReply() {
+    replyData = null;
+    document.getElementById('replyPreview').style.display = 'none';
+}
+
+function deleteLocal() { alert("Removed for you."); document.getElementById('msgOptions').style.display = 'none'; }
+
+function updateSendBtn() {
+    const btn = document.getElementById('actionBtn');
+    const txt = document.getElementById('postText').value.trim();
+    btn.innerHTML = txt ? '<i class="fi fi-sr-paper-plane" style="color:#25d366;"></i>' : '<i class="fi fi-sr-microphone"></i>';
+}
+
+async function handleAction() {
+    const postInput = document.getElementById('postText');
+    const txt = postInput.value.trim();
+    if(!activeGID) return alert("Select group!");
+    if(txt !== "") { 
+        let postObj = { 
+            text: txt, type: 'text', uid: myID, 
+            name: (myData && myData.fullName) ? myData.fullName : "User", 
+            time: firebase.database.ServerValue.TIMESTAMP 
+        };
+        if(replyData) postObj.replyTo = { name: replyData.name, text: replyData.text };
+        rtdb.ref(`groupPosts/${activeGID}`).push(postObj).then(() => {
+            postInput.value = ""; cancelReply(); updateSendBtn();
+        }).catch(err => alert("Error: " + err.message));
+    } else { startVoiceRecording(); }
+}
+
+async function startVoiceRecording() {
+    if(mediaRecorder && mediaRecorder.state === "recording") { mediaRecorder.stop(); document.getElementById('actionBtn').classList.remove('recording'); return; }
+    try {
+        let stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream); audioChunks = [];
+        document.getElementById('actionBtn').classList.add('recording');
+        mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+        mediaRecorder.onstop = async () => {
+            showLoader(true);
+            let reader = new FileReader(); reader.readAsDataURL(new Blob(audioChunks));
+            reader.onloadend = async () => {
+                try {
+                    let res = await fetch(GAS_URL, { method: "POST", body: JSON.stringify({ filename: `V_${Date.now()}.mp3`, file: reader.result.split(',')[1] }) });
+                    let d = await res.json(); 
+                    if(d.link) {
+                        rtdb.ref(`groupPosts/${activeGID}`).push({ 
+                            url: d.link, type: 'audio', uid: myID, 
+                            name: (myData && myData.fullName) ? myData.fullName : "User",
+                            time: firebase.database.ServerValue.TIMESTAMP
+                        });
+                    }
+                } catch(e) { alert("Voice failed!"); }
+                showLoader(false);
+            };
+        };
+        mediaRecorder.start();
+    } catch(e) { alert("Microphone access denied!"); }
+}
+
+document.getElementById('postFile').onchange = async function(e) {
+    let file = e.target.files[0]; if(!file) return;
+    showLoader(true);
+    try {
+        let url = (file.type.startsWith('image/')) ? await uploadToImgBB(file) : await uploadToCloudinary(file);
+        rtdb.ref(`groupPosts/${activeGID}`).push({ 
+            url, type: file.type.startsWith('image/')?'image':'video', uid: myID, 
+            name: (myData && myData.fullName) ? myData.fullName : "User",
+            time: firebase.database.ServerValue.TIMESTAMP
+        });
+    } catch(err) { alert("Upload failed!"); }
+    showLoader(false);
+};
+</script>
+<script src="appEngine.js"></script> 
+</body>
+</html>

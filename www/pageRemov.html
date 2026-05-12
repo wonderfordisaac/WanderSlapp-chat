@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="ny">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Page Settings - Delete</title>
+    
+    <!-- 1. LUBANGA LA SWEETALERT2 (Izi n'zofunika kuti alert zikhale za professional) -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-database-compat.js"></script>
+    <link rel='stylesheet' href='https://cdn-uicons.flaticon.com/uicons-solid-rounded/css/uicons-solid-rounded.css'>
+
+    <style>
+        :root { --main: #0a2b4f; --bg: #f0f2f5; --white: #ffffff; --red: #dc3545; }
+        body { font-family: system-ui; margin: 0; background: var(--bg); color: #1c1e21; }
+        
+        header { 
+            background: var(--main); 
+            color: white; 
+            padding: 15px; 
+            display: flex; 
+            align-items: center; 
+            font-weight: bold; 
+        }
+        .back-link { color: white; text-decoration: none; font-size: 20px; margin-right: 15px; display: flex; align-items: center; cursor: pointer; }
+        
+        .container { padding: 20px; max-width: 500px; margin: auto; }
+        
+        .card { 
+            background: var(--white); 
+            padding: 25px; 
+            border-radius: 12px; 
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1); 
+            text-align: center;
+        }
+
+        .page-info-box {
+            background: #fff5f5;
+            border: 1px solid #ffcccc;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: none; 
+        }
+
+        .btn-delete {
+            background: var(--red);
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 15px;
+            font-size: 15px;
+        }
+        .btn-delete:disabled { background: #ccc; cursor: not-allowed; }
+
+        .loader {
+            display: none;
+            width: 25px;
+            height: 25px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid var(--red);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 15px auto;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .msg { font-size: 13px; margin-top: 10px; color: var(--red); font-weight: 500; }
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-sizing: border-box;
+            margin-top: 10px;
+            outline: none;
+            text-align: center;
+        }
+
+        /* Sinthani ma button a SweetAlert kuti agwirizane ndi App yanu */
+        .swal2-styled.swal2-confirm { background-color: var(--red) !important; }
+    </style>
+</head>
+<body>
+
+<header>
+    <a id="backBtn" class="back-link"><i class="fi fi-sr-arrow-left"></i></a>
+    <div>Delete Page</div>
+</header>
+
+<div class="container">
+    <div class="card">
+        <i class="fi fi-sr-trash" style="font-size: 50px; color: var(--red);"></i>
+        <h2 style="margin: 10px 0;">Delete Your Page</h2>
+        <p style="color: #666; font-size: 14px; line-height: 1.5;">
+            When you delete your Page, all content such as <b>posts, followers, and stats</b> will be permanently deleted.
+        </p>
+
+        <div id="pageDataBox" class="page-info-box">
+            <span id="pageNameDisplay" style="font-weight: bold; color: var(--main);"></span>
+        </div>
+
+        <div id="loadingPage" style="padding: 20px; font-size: 14px; color: #888;">Loading...</div>
+
+        <div id="deleteForm" style="display: none;">
+            <p style="font-size: 13px; font-weight: bold; margin-bottom: 5px;">Enter your page name to confirm:</p>
+            <input type="text" id="confirmPageName" placeholder="Enter your page name">
+            
+            <div id="loaderDelete" class="loader"></div>
+            <button class="btn-delete" id="deleteBtn" onclick="handleDeletePage()">DELETE PAGE PERMANENTLY</button>
+            <p id="msgError" class="msg"></p>
+        </div>
+
+        <div id="noPageMsg" style="display: none; padding: 20px; color: #666;">
+            We cant find your page Name in our data.
+        </div>
+    </div>
+</div>
+
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyDt_ayoflnFkRRnS2fXITY2EzJz0KcW5QA",
+        authDomain: "makert-bfb76.firebaseapp.com",
+        databaseURL: "https://makert-bfb76-default-rtdb.firebaseio.com",
+        projectId: "makert-bfb76",
+        storageBucket: "makert-bfb76.firebasestorage.app",
+        messagingSenderId: "245693362931",
+        appId: "1:245693362931:web:e15662a22dd50d2ac63d86"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+    const rtdb = firebase.database();
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const pageIDfromURL = urlParams.get('pageId'); 
+
+    let myPageName = "";
+
+    auth.onAuthStateChanged(async user => {
+        if(user) {
+            if(pageIDfromURL) {
+                document.getElementById('backBtn').href = `pageSettings.html?pageId=${pageIDfromURL}`;
+                
+                try {
+                    const doc = await db.collection("pages").doc(pageIDfromURL).get();
+                    document.getElementById('loadingPage').style.display = 'none';
+
+                    if (doc.exists && doc.data().owner === user.uid) {
+                        myPageName = doc.data().name;
+                        document.getElementById('pageNameDisplay').innerText = "Page: " + myPageName;
+                        document.getElementById('pageDataBox').style.display = 'block';
+                        document.getElementById('deleteForm').style.display = 'block';
+                    } else {
+                        document.getElementById('noPageMsg').style.display = 'block';
+                        document.getElementById('noPageMsg').innerText = "Simuli eni ake a Page iyi.";
+                    }
+                } catch (error) {
+                    document.getElementById('noPageMsg').style.display = 'block';
+                }
+            } else {
+                document.getElementById('loadingPage').style.display = 'none';
+                document.getElementById('noPageMsg').style.display = 'block';
+            }
+        } else {
+            window.location.href = "login.html";
+        }
+    });
+
+    async function handleDeletePage() {
+        const inputName = document.getElementById('confirmPageName').value.trim();
+        const msg = document.getElementById('msgError');
+        
+        if(inputName.toLowerCase() !== myPageName.toLowerCase()) {
+            // 2. ALERT YA MBALI IMODZI (Professional Error)
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Page name does not match!',
+                confirmButtonColor: '#0a2b4f'
+            });
+            return;
+        }
+
+        // 3. CONFIRMATION ALERT (Opanda ma link a website)
+        Swal.fire({
+            title: 'Do you confirm?',
+            text: "Do you want to delete this Page permanently?you never undo!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            cancelButtonColor: '#aaa',
+            confirmButtonText: 'yes, delete!',
+            cancelButtonText: 'no, cancel'
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                const btn = document.getElementById('deleteBtn');
+                const loader = document.getElementById('loaderDelete');
+                btn.disabled = true;
+                loader.style.display = 'block';
+
+                try {
+                    await db.collection("pages").doc(pageIDfromURL).delete();
+
+                    const snapshot = await rtdb.ref("pagePosts").orderByChild("pageId").equalTo(pageIDfromURL).once('value');
+                    if(snapshot.exists()) {
+                        const updates = {};
+                        snapshot.forEach(child => {
+                            updates[child.key] = null;
+                            rtdb.ref(`postStats/${child.key}`).remove();
+                        });
+                        await rtdb.ref("pagePosts").update(updates);
+                    }
+
+                    await rtdb.ref(`monit_stats/${pageIDfromURL}`).remove();
+
+                    // 4. SUCCESS ALERT (Opanda ma link)
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'successful!',
+                        text: 'Your page deleted.',
+                        confirmButtonColor: '#0a2b4f'
+                    }).then(() => {
+                        window.location.href = "index.html";
+                    });
+
+                } catch(e) {
+                    Swal.fire('Error', e.message, 'error');
+                    btn.disabled = false;
+                }
+                loader.style.display = 'none';
+            }
+        });
+    }
+</script>
+</body>
+</html>

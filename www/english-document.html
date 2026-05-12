@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="ny">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>WanderSlapp Document</title>
+    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-solid-rounded/css/uicons-solid-rounded.css">
+    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-regular-rounded/css/uicons-regular-rounded.css">
+    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-brands/css/uicons-brands.css">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <style>
+        :root { --admin-main: #0a142b; --accent: #28a745; --danger: #dc3545; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f4f7f6; margin: 0; }
+        header { background: var(--admin-main); color: white; padding: 20px; text-align: center; }
+
+        .back-link { color: white; text-decoration: none; display: flex; align-items: center; }
+        
+        .container { padding: 15px; max-width: 600px; margin: auto; }
+        .user-card { background: white; padding: 15px; border-radius: 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .btn-manage { background: var(--accent); color: white; border: none; padding: 10px 15px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+
+        #postManager { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #fff; z-index: 1000; overflow-y: auto; }
+        .post-item { border-bottom: 5px solid #f0f2f5; padding: 15px; }
+        
+        /* Media Preview CSS ya Video ndi Image */
+        .media-preview-box { width: 80px; height: 80px; border-radius: 8px; overflow: hidden; background: #000; display: flex; align-items: center; justify-content: center; position: relative; }
+        .media-preview-box img, .media-preview-box video { width: 100%; height: 100%; object-fit: cover; }
+        .video-icon-overlay { position: absolute; color: white; font-size: 20px; opacity: 0.8; pointer-events: none; }
+        
+        .ad-box { margin-top: 10px; padding: 12px; border-radius: 10px; background: #f9f9f9; border: 1px dashed #ccc; }
+        .status-badge { font-size: 10px; padding: 4px 8px; border-radius: 5px; font-weight: 800; display: inline-block; margin-bottom: 5px; }
+        .active-ad { background: #d4edda; color: #155724; }
+        .no-ad { background: #f8d7da; color: #721c24; }
+
+        .upload-row { display: flex; gap: 8px; margin-top: 10px; }
+        .action-btn { flex: 1; padding: 12px; border: none; border-radius: 6px; color: white; font-weight: bold; cursor: pointer; font-size: 12px; }
+        .btn-img { background: #17a2b8; }
+        .btn-vid { background: #fd7e14; }
+        .btn-del { background: var(--danger); }
+
+         /* CONTACT BAR PANSI */
+        .contact-bar {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding-bottom: 50px;
+        }
+
+        .contact-item {
+            flex: 1;
+            text-decoration: none;
+            color: #FFFF00; /* Yellow pama link onse */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-weight: 900;
+            text-shadow: 2px 2px 5px rgba(0, 0, 0, 1);
+        }
+
+        .contact-item i { 
+            font-size: 2.5rem; 
+            margin-bottom: 8px;
+            /* Izi zipangitsa ma icon nawo kukhala ndi mthunzi wakuda */
+            filter: drop-shadow(2px 2px 4px rgba(0,0,0,1));
+        }
+
+        /* Tinasunga mitundu ya ma logo koma tawaonjezera kuwala */
+        .fa-whatsapp { color: #25D366; }
+        .fa-envelope { color: #ffffff; } /* Email ndaika yoyera kuti ifanane ndi yellow */
+        .fa-facebook { color: #1877F2; }
+
+        #loader { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 2000; color: white; flex-direction: column; align-items: center; justify-content: center; }
+        .spinner { border: 4px solid rgba(255,255,255,0.3); border-top: 4px solid #fff; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 10px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+<header>
+    <a href="document.html" class="back-link"><i class="fi fi-sr-arrow-left"></i></a>
+    <h2>WanderSlapp Document</h2>
+    <small>read this document carefully</small>
+</header>
+
+<p>PLEASE LISTEN TO THIS MESSAGE!<br>
+	<br>
+
+Man, I am a very big visionary, I want all of you who are on this app to be able to receive your money that you have earned on this app (monitaizetion).<br>
+<br>
+
+but I would like to apologize because you cannot receive this money at this time, because WANDERSLAPP is not making any profit at this time. but I am very happy that you are here in the village, you are encouraging me a lot and I know that WANDERSLAPP will definitely start making profit with this app in the future, this will make us start giving monitaizetion money to everyone.<br>
+<br>
+
+WHAT IS IMPORTANT RIGHT NOW?<br>
+<br>
+
+If you see on this application there are many ways to advertise, and when the businessmen start to advertise their products here, it will be easy for you users of this app to see the products. But keep in mind that, in order for merchants to start advertising their products here, they first look at the number of people using the app.<br>
+<br>
+
+For this reason, I ask all of you who have already signed in to our app to tell your friends to sign in to this app, because the more we get, the more profit we will make with this app and the profit we will share with all of us on this app.<br>
+<br>
+
+The ways you are making money on WANDERSLAPP are all the ways we have put together to make real money using this app. But first of all, I request that we all work together to make this app the best in Malawi.<br>
+<br>
+
+Perhaps you yourself have also seen that this app has been designed in a high quality, considering the situation in Malawi.<br>
+<br>
+
+Please help me build this application. Your great Suport is needed. Now don't focus too much on money, but consider the usefulness of this app going forward.<br>
+<br>
+
+THE JUSTICE NOW!<br>
+<br>
+
+WANDERSLAPP does not provide monitaizetion fees. What is happening now is only to help attract people to come to this application. You are also encouraged to participate in this campaign.<br>
+<br>
+
+Share with people, friends on Facebook, Whatsapp and any other place you can.<br>
+<br>
+
+You can just send this link to your friends so they can download it themselves<br>
+https://free-apps-6nzk.onrender.com/<br>
+<br>
+
+Let's work on inviting more people on this application, we will all benefit from this app.<br>
+<br>
+
+First of all, learn it yourself, know it well, be able to explain to others about this app. In order for them to be attracted to this app, show them your monitaizetion money, make SCREENSHOT of the different events of this app and show people on FACEBOOK and any other places.<br>
+<br>
+
+SUPPORT, SUPPORT, SUPPORT MALAWI<br>
+<br>
+
+WANDERSLAPP</P>
+
+<h2>Do you have a quenstion?</h2><p><mark>Contact us</p>
+
+<div class="contact-bar">
+            <a href="https://wa.me/2650990914737" class="contact-item">
+                <i class="fab fa-whatsapp"></i>
+                <span>WHATSAPP</span>
+            </a>
+            <a href="mailto:wanderslappprograms@gmail.com" class="contact-item">
+                <i class="fas fa-envelope"></i>
+                <span>EMAIL</span>
+            </a>
+            <a href="https://www.facebook.com/isaacsupersaax.wanderford.1" class="contact-item">
+                <i class="fab fa-facebook"></i>
+                <span>FACEBOOK</span>
+            </a>
+        </div>
+
+</body>
+</html>

@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="ny">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Runner Champion</title>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-database-compat.js"></script>
+
+    <style>
+        body { margin: 0; overflow: hidden; background: #87CEEB; font-family: 'Arial', sans-serif; touch-action: manipulation; }
+        canvas { display: block; }
+        #ui { position: absolute; top: 20px; left: 20px; font-size: 24px; color: white; text-shadow: 2px 2px 4px #000; z-index: 10; display: flex; gap: 15px; align-items: center; }
+        .controls { position: absolute; top: 20px; right: 20px; z-index: 30; display: flex; gap: 10px; }
+        .btn-small { background: rgba(0,0,0,0.6); color: white; border: 2px solid white; padding: 10px; border-radius: 5px; cursor: pointer; font-size: 14px; }
+        
+        #runnerGif { position: absolute; width: 70px; height: 70px; pointer-events: none; z-index: 5; display: none; }
+
+        .overlay { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.85); display: flex; flex-direction: column; 
+            justify-content: center; align-items: center; color: white; z-index: 100; text-align: center;
+        }
+
+        /* Wallet & Betting Styles */
+        .btn-wallet { position: absolute; top: 80px; right: 20px; background: #ffc107; color: #000; border: none; padding: 8px 12px; border-radius: 5px; font-weight: bold; cursor: pointer; z-index: 110; font-size: 12px; }
+        #wallet-page { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0a142b; z-index: 2000; flex-direction: column; align-items: center; padding-top: 50px; color: white; }
+        .wallet-card { background: #1a2a4a; padding: 20px; border-radius: 20px; width: 80%; text-align: center; margin-bottom: 20px; }
+        .wallet-input, .bet-input { width: 70%; padding: 12px; border-radius: 10px; border: none; margin: 10px 0; text-align: center; font-size: 18px; }
+        .btn-transfer, .main-btn { background: #28a745; color: white; border: none; padding: 12px 20px; border-radius: 10px; width: 80%; margin: 5px; font-weight: bold; cursor: pointer; }
+        
+        #msg, #pauseScreen { display: none; }
+        .start-img { width: 120px; height: auto; margin-bottom: 15px; border: 3px solid white; border-radius: 10px; }
+        
+        button.main-btn { width: auto; padding: 15px 40px; font-size: 22px; margin-top: 20px; box-shadow: 0 5px #2e6631; }
+        button.main-btn:active { box-shadow: 0 2px #2e6631; transform: translateY(3px); }
+        .bal-display { background: rgba(0,0,0,0.5); padding: 5px 15px; border-radius: 20px; border: 1px solid gold; margin-bottom: 10px; }
+    </style>
+</head>
+<body onmousedown="handleJump()" ontouchstart="handleJump()">
+
+    <div id="ui">
+        <div>Nthawi: <span id="timer">0</span>s / 60s</div>
+        <div id="game-balance-hud" style="color: #FFD700; margin-left: 20px;">MK: 0</div>
+    </div>
+
+    <div class="controls">
+        <button class="btn-small" onclick="togglePause(event)" id="pauseBtn">PAUSE</button>
+        <button class="btn-small" onclick="toggleMute(event)" id="muteBtn">MUTE</button>
+    </div>
+
+    <button class="btn-wallet" onclick="openWallet()">WALLET</button>
+
+    <div id="startScreen" class="overlay">
+        <img src="images/my runer4.gif" class="start-img" alt="Runner">
+        <h1>RUNNER CHAMPION</h1>
+        <div class="bal-display">Current Balance: <span id="start-bal">MK 0</span></div>
+        <p>Lowetsani ndalama yoti mubetele (Bet Amount):</p>
+        <input type="number" id="betAmount" class="bet-input" placeholder="Enter MK Amount" value="100">
+        <button class="main-btn" onclick="checkBetAndStart()">PLACE BET & PLAY</button>
+    </div>
+
+    <div id="wallet-page">
+        <h2>WALLET SYSTEM</h2>
+        <div class="wallet-card">
+            <small>Game Balance</small>
+            <h2 id="w_gameBal">MK 0</h2>
+            <hr>
+            <small>Monitization Balance</small>
+            <h2 id="w_moniBal" style="color: #28a745;">MK 0</h2>
+        </div>
+        <input type="number" id="transferAmt" class="wallet-input" placeholder="Enter Amount">
+        <button class="btn-transfer" onclick="withdrawToMoni()">WITHDRAW TO MONITIZATION</button>
+        <button class="btn-transfer" style="background:#007bff;" onclick="depositFromMoni()">DEPOSIT TO GAME</button>
+        <button class="btn-transfer" style="background:#666;" onclick="closeWallet()">CLOSE</button>
+    </div>
+
+    <div id="pauseScreen" class="overlay">
+        <h1>GAME PAUSED</h1>
+        <button class="main-btn" onclick="togglePause(event)">CONTINUE</button>
+    </div>
+
+    <div id="msg" class="overlay">
+        <h1 id="status">GAME OVER</h1>
+        <p id="subtext">You failed to finish!</p>
+        <h2 id="bet-result" style="color: #ff4444;">- MK 0</h2>
+        <button class="main-btn" onclick="resetGame()">START AGAIN</button>
+    </div>
+
+    <img id="runnerGif" src="images/my runer4.gif" alt="runner">
+
+    <audio id="bgMusic" loop preload="auto"><source src="music/goodBackgroud-music.mp3" type="audio/mpeg"></audio>
+    <audio id="jumpSound" preload="auto"><source src="music/game sound2.mp3" type="audio/mpeg"></audio>
+    <audio id="gameOverSound" preload="auto"><source src="music/lose.wav" type="audio/mpeg"></audio>
+    <audio id="winSound" preload="auto"><source src="music/win.wav" type="audio/mpeg"></audio>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        // --- FIREBASE & WALLET CONFIG ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyDt_ayoflnFkRRnS2fXITY2EzJz0KcW5QA",
+            authDomain: "makert-bfb76.firebaseapp.com",
+            databaseURL: "https://makert-bfb76-default-rtdb.firebaseio.com",
+            projectId: "makert-bfb76",
+            storageBucket: "makert-bfb76.firebasestorage.app",
+            messagingSenderId: "245693362931",
+            appId: "1:245693362931:web:e15662a22dd50d2ac63d86"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const rtdb = firebase.database();
+        const auth = firebase.auth();
+
+        let myID, moniBal = 0;
+        let balance = parseInt(localStorage.getItem('runner_balance')) || 0;
+        let currentBet = 0;
+
+        auth.onAuthStateChanged(user => {
+            if(user) {
+                myID = user.uid;
+                syncWithMonitization();
+            }
+        });
+
+        function syncWithMonitization() {
+            rtdb.ref(`monit_stats/${myID}`).on('value', snap => {
+                const d = snap.val() || {};
+                let money = (d.likes || 0) * 5.50 + (d.comments || 0) * 10.50 + (d.shares || 0) * 1.00;
+                money += (d.ads_image_views || 0) * 25.00 + (d.ads_video_views || 0) * 10.00;
+                let adjustment = d.admin_adjustment || 0;
+                moniBal = (money + adjustment) - (d.total_withdrawn || 0);
+                document.getElementById("w_moniBal").innerText = "MK " + moniBal.toFixed(2);
+                updateUI();
+            });
+        }
+
+        function updateUI() {
+            document.getElementById("start-bal").innerText = "MK " + balance;
+            document.getElementById("game-balance-hud").innerText = "MK: " + balance;
+            document.getElementById("w_gameBal").innerText = "MK " + balance;
+        }
+
+        function openWallet() { document.getElementById("wallet-page").style.display = "flex"; }
+        function closeWallet() { document.getElementById("wallet-page").style.display = "none"; }
+
+        function withdrawToMoni() {
+            const amt = parseFloat(document.getElementById("transferAmt").value);
+            if(amt > 0 && amt <= balance) {
+                balance -= amt;
+                saveData();
+                rtdb.ref(`monit_stats/${myID}/admin_adjustment`).transaction(c => (c || 0) + amt);
+                alert("Sent to Monitization!");
+                updateUI();
+            } else { alert("Invalid Amount!"); }
+        }
+
+        function depositFromMoni() {
+            const amt = parseFloat(document.getElementById("transferAmt").value);
+            if(amt > 0 && amt <= moniBal) {
+                balance += amt;
+                saveData();
+                rtdb.ref(`monit_stats/${myID}/admin_adjustment`).transaction(c => (c || 0) - amt);
+                alert("Deposit Successful!");
+                updateUI();
+            } else { alert("Not enough Monitization Balance!"); }
+        }
+
+        function saveData() { localStorage.setItem('runner_balance', balance); }
+
+        function checkBetAndStart() {
+            let betInput = document.getElementById("betAmount").value;
+            currentBet = parseInt(betInput);
+
+            if (isNaN(currentBet) || currentBet <= 0) {
+                alert("Chonde lowetsani ndalama yoyenera!");
+                return;
+            }
+            if (currentBet > balance) {
+                alert("Ndalama pa balance yanu ndiyochepa!");
+                return;
+            }
+            
+            startGame();
+        }
+
+        // --- GAME LOGIC ---
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        const timerTxt = document.getElementById("timer");
+        const runnerElement = document.getElementById("runnerGif");
+        
+        const bgMusic = document.getElementById("bgMusic");
+        const jumpSound = document.getElementById("jumpSound");
+        const gameOverSound = document.getElementById("gameOverSound");
+        const winSound = document.getElementById("winSound");
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        let gameActive = false;
+        let isPaused = false;
+        let isMuted = false;
+        let hasWon = false;
+        let timePassed = 0;
+        let gameSpeed = 7;
+        let frameCount = 0;
+        const targetTime = 60; 
+
+        const player = { x: 100, y: 0, w: 60, h: 60, dy: 0, jumpPower: -14, gravity: 0.7, jumpsLeft: 2, onGround: false };
+        let platforms = [{ x: 0, y: canvas.height - 100, w: 800, h: 100 }];
+
+        function startGame() {
+            document.getElementById("startScreen").style.display = "none";
+            runnerElement.style.display = "block";
+            gameActive = true;
+            if(!isMuted) bgMusic.play().catch(e => console.log("Audio play error"));
+            update();
+        }
+
+        function handleJump(e) {
+            if (e) e.preventDefault();
+            if (!gameActive || isPaused) return;
+            if (player.jumpsLeft > 0) {
+                player.dy = player.jumpPower;
+                player.jumpsLeft--;
+                player.onGround = false;
+                if(!isMuted) { jumpSound.currentTime = 0; jumpSound.play(); }
+            }
+        }
+
+        function togglePause(e) {
+            e.stopPropagation();
+            if (!gameActive && !isPaused) return;
+            isPaused = !isPaused;
+            document.getElementById("pauseScreen").style.display = isPaused ? "flex" : "none";
+            document.getElementById("pauseBtn").innerText = isPaused ? "PLAY" : "PAUSE";
+            if (isPaused) bgMusic.pause(); else if(!isMuted) bgMusic.play();
+        }
+
+        function toggleMute(e) {
+            e.stopPropagation();
+            isMuted = !isMuted;
+            bgMusic.muted = isMuted;
+            document.getElementById("muteBtn").innerText = isMuted ? "UNMUTE" : "MUTE";
+        }
+
+        function resetGame() { location.reload(); }
+
+        function update() {
+            if (!gameActive || isPaused) {
+                if(gameActive) requestAnimationFrame(update);
+                return;
+            }
+
+            frameCount++;
+            if (frameCount % 60 === 0) {
+                timePassed++;
+                timerTxt.innerText = timePassed;
+            }
+
+            player.dy += player.gravity;
+            player.y += player.dy;
+            player.onGround = false; 
+
+            for (let p of platforms) {
+                if (player.x + player.w - 15 > p.x && player.x + 15 < p.x + p.w && 
+                    player.y + player.h <= p.y + 15 && player.y + player.h + player.dy >= p.y) {
+                    player.y = p.y - player.h;
+                    player.dy = 0;
+                    player.onGround = true;
+                    player.jumpsLeft = 2;
+                }
+                p.x -= gameSpeed;
+            }
+
+            if (platforms[platforms.length - 1].x + platforms[platforms.length - 1].w < canvas.width + 300) {
+                if (timePassed < targetTime) {
+                    let gap = 150 + Math.random() * 150;
+                    let width = 250 + Math.random() * 300;
+                    platforms.push({ x: platforms[platforms.length - 1].x + platforms[platforms.length - 1].w + gap, y: canvas.height - 100, w: width, h: 100 });
+                } else {
+                    platforms.push({ x: platforms[platforms.length - 1].x + platforms[platforms.length - 1].w + 100, y: canvas.height - 100, w: 3000, h: 100, isFinish: true });
+                }
+            }
+
+            let finishLine = platforms.find(p => p.isFinish);
+            if (finishLine && player.x > finishLine.x + 200 && player.onGround && !hasWon) {
+                win();
+                return;
+            }
+
+            if (player.y > canvas.height) {
+                gameOver();
+                return;
+            }
+
+            runnerElement.style.left = player.x + "px";
+            runnerElement.style.top = player.y + "px";
+
+            draw();
+            requestAnimationFrame(update);
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (let p of platforms) {
+                ctx.fillStyle = p.isFinish ? "#FFD700" : "#2c3e50";
+                ctx.fillRect(p.x, p.y, p.w, p.h);
+                ctx.fillStyle = p.isFinish ? "#FFF" : "#27ae60";
+                ctx.fillRect(p.x, p.y, p.w, 12);
+                
+                if (p.isFinish) {
+                    ctx.fillStyle = "black";
+                    ctx.font = "bold 24px Arial";
+                    ctx.fillText("FINISH LINE 🇲🇼🏁", p.x + 150, p.y + 60);
+                }
+            }
+        }
+
+        function win() {
+            hasWon = true;
+            gameActive = false;
+            bgMusic.pause();
+            
+            // Win Logic: Balance iwonjezeke ndi MK currentBet
+            balance += currentBet;
+            saveData();
+            updateUI();
+
+            if(!isMuted) {
+                winSound.currentTime = 0;
+                winSound.play();
+            }
+            
+            document.getElementById("status").innerText = "CHAMPION! 🏆";
+            document.getElementById("status").style.color = "#FFD700";
+            document.getElementById("subtext").innerText = "Congratulations! You won MK " + currentBet;
+            document.getElementById("bet-result").innerText = "+ MK " + currentBet;
+            document.getElementById("bet-result").style.color = "#28a745";
+            document.getElementById("msg").style.display = "flex";
+        }
+
+        function gameOver() {
+            if (hasWon) return;
+            gameActive = false;
+            bgMusic.pause();
+
+            // Lose Logic: Balance ichotsedwe MK currentBet
+            balance -= currentBet;
+            saveData();
+            updateUI();
+
+            if(!isMuted) gameOverSound.play();
+
+            document.getElementById("status").innerText = "GAME OVER";
+            document.getElementById("status").style.color = "red";
+            document.getElementById("subtext").innerText = "You lost your bet.";
+            document.getElementById("bet-result").innerText = "- MK " + currentBet;
+            document.getElementById("bet-result").style.color = "#ff4444";
+            document.getElementById("msg").style.display = "flex";
+            runnerElement.style.display = "none";
+        }
+
+        // Initialize UI
+        updateUI();
+    </script>
+    <script src="runaAds.js"></script> 
+</body>
+</html>

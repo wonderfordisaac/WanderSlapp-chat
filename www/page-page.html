@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="ny">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WanderSlapp - Pages</title>
+    <link rel='stylesheet' href='https://cdn-uicons.flaticon.com/uicons-solid-rounded/css/uicons-solid-rounded.css'>
+    <style>
+        body { font-family: system-ui, sans-serif; background: #f0f2f5; margin: 0; padding: 0; }
+        .header { background: #0a2b4f; color: white; padding: 15px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+        
+        /* Form ya Create Page */
+        #createPageForm { display: none; background: white; padding: 20px; min-height: 100vh; position: fixed; top: 0; width: 100%; z-index: 200; box-sizing: border-box; }
+        .form-group { margin-bottom: 15px; }
+        input, select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+        .btn-save { background: #0a2b4f; color: white; border: none; padding: 15px; width: 100%; border-radius: 8px; font-weight: bold; }
+
+        /* Magawo a List */
+        .section-title { padding: 15px 15px 5px 15px; font-weight: bold; color: #0a2b4f; font-size: 14px; }
+        
+        /* My Pages - Horizontal Scroll */
+        .my-pages-scroll { display: flex; overflow-x: auto; padding: 10px 15px; gap: 15px; scrollbar-width: none; }
+        .my-pages-scroll::-webkit-scrollbar { display: none; }
+        .my-page-item { min-width: 80px; text-align: center; cursor: pointer; }
+        .my-page-item img { width: 65px; height: 65px; border-radius: 50%; border: 2px solid #0a2b4f; object-fit: cover; }
+        .my-page-item span { display: block; font-size: 11px; margin-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 80px; }
+
+        /* Discover - Vertical List */
+        .discover-list { padding: 10px 15px; }
+        .page-card { background: white; border-radius: 12px; padding: 12px; display: flex; align-items: center; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .page-card img { width: 50px; height: 50px; border-radius: 10px; object-fit: cover; cursor: pointer; }
+        .page-info { flex: 1; margin-left: 12px; cursor: pointer; }
+        .page-info h3 { margin: 0; font-size: 15px; }
+        .page-info p { margin: 0; font-size: 12px; color: #777; }
+        .btn-follow-small { background: #0a2b4f; color: white; border: none; padding: 6px 15px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; }
+        .btn-following-small { background: #e4e6eb; color: black; }
+    </style>
+</head>
+<body>
+
+<div id="mainUI">
+    <div class="header">
+        <button class="back-btn" onclick="goBack()">←</button>
+        <b>Pages</b>
+        <button onclick="showCreateForm()" style="background:#fff; color:#0a2b4f; border:none; padding:5px 10px; border-radius:5px; font-size:12px; font-weight:bold;">+ Create</button>
+    </div>
+
+    <div class="section-title">YOUR PAGE'S</div>
+    <div class="my-pages-scroll" id="myPagesContainer">
+        </div>
+
+    <hr style="border: 0; border-top: 5px solid #e4e6eb; margin: 10px 0;">
+
+    <div class="section-title">FOLLOW PAGE'S</div>
+    <div class="discover-list" id="discoverContainer">
+        </div>
+</div>
+
+<div id="createPageForm">
+    <div style="display:flex; align-items:center; margin-bottom:20px;">
+        <button onclick="hideCreateForm()" style="border:none; background:none; font-size:20px; margin-right:15px;"><i class="fi fi-sr-arrow-left"></i></button>
+        <h3 style="margin:0;">Create Page</h3>
+    </div>
+    <div class="form-group"><input type="text" id="pgName" placeholder="Page Name"></div>
+    <div class="form-group">
+        <select id="pgCategory">
+            <option value="Business">Business</option>
+            <option value="Artist">Artist</option>
+            <option value="Comedian">Comedian</option>
+            <option value="Content Creator">Content Creator</option>
+        </select>
+    </div>
+    <div class="form-group">
+        <select id="pgLinkType" onchange="toggleLinkInput()">
+            <option value="whatsapp">WhatsApp</option>
+            <option value="email">Email</option>
+            <option value="website">Website</option>
+        </select>
+    </div>
+    <div class="form-group"><input type="text" id="pgLinkValue" placeholder="Your WhatsApp Nomber"></div>
+    <button class="btn-save" onclick="savePage()">CREATE NOW</button>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
+
+<script>
+    // --- CHOYAMBA: TENGA PAGE ID KUCHOKERA MU URL ---
+const urlParams = new URLSearchParams(window.location.search);
+const pageID = urlParams.get('pageId');
+
+function goBack() {
+    if (pageID) {
+        location.href = 'page-dashboard.html?pageId=' + pageID;
+    } else {
+        // Ngati palibe ID, bwererani komwe mwachokera
+        window.history.back();
+    }
+}
+
+    const firebaseConfig = { 
+        apiKey: "AIzaSyDt_ayoflnFkRRnS2fXITY2EzJz0KcW5QA",
+        authDomain: "makert-bfb76.firebaseapp.com",
+        databaseURL: "https://makert-bfb76-default-rtdb.firebaseio.com",
+        projectId: "makert-bfb76",
+        storageBucket: "makert-bfb76.firebasestorage.app",
+        messagingSenderId: "245693362931",
+        appId: "1:245693362931:web:e15662a22dd50d2ac63d86"
+
+     };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const auth = firebase.auth();
+
+    let myID;
+    auth.onAuthStateChanged(user => {
+        if(user) {
+            myID = user.uid;
+            loadAllData();
+        }
+    });
+
+    function showCreateForm() { document.getElementById('createPageForm').style.display = 'block'; }
+    function hideCreateForm() { document.getElementById('createPageForm').style.display = 'none'; }
+
+    function toggleLinkInput() {
+        const type = document.getElementById('pgLinkType').value;
+        const input = document.getElementById('pgLinkValue');
+        input.placeholder = type === 'whatsapp' ? "Your WhatsApp Nomber" : (type === 'email' ? "Email Address" : "Website URL Link");
+    }
+
+    async function savePage() {
+        const name = document.getElementById('pgName').value;
+        const cat = document.getElementById('pgCategory').value;
+        const lType = document.getElementById('pgLinkType').value;
+        const lVal = document.getElementById('pgLinkValue').value;
+        if(!name || !lVal) return alert("fill all!");
+
+        await db.collection("pages").add({
+            owner: myID, name, category: cat, linkType: lType, linkValue: lVal,
+            followers: [], profilePhoto: 'https://i.ibb.co/7z5nDqK/avatar.png',
+            coverPhoto: 'https://i.ibb.co/7z5nDqK/avatar.png', createdAt: Date.now()
+        });
+        location.reload();
+    }
+
+    async function loadAllData() {
+        const snapshot = await db.collection("pages").get();
+        const myCon = document.getElementById('myPagesContainer');
+        const disCon = document.getElementById('discoverContainer');
+        myCon.innerHTML = ""; disCon.innerHTML = "";
+
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            const id = doc.id;
+            const isFollowing = data.followers.includes(myID);
+
+            if(data.owner === myID) {
+                // My Pages Horizontal List
+                myCon.innerHTML += `
+                    <div class="my-page-item" onclick="location.href='pageProfile.html?pageId=${id}'">
+                        <img src="${data.profilePhoto}">
+                        <span>${data.name}</span>
+                    </div>`;
+            } else {
+                // Discover Vertical List
+                disCon.innerHTML += `
+                    <div class="page-card">
+                        <img src="${data.profilePhoto}" onclick="location.href='pageProfile.html?pageId=${id}'">
+                        <div class="page-info" onclick="location.href='pageProfile.html?pageId=${id}'">
+                            <h3>${data.name}</h3>
+                            <p>${data.followers.length} followers</p>
+                        </div>
+                        <button class="btn-follow-small ${isFollowing ? 'btn-following-small' : ''}" 
+                                onclick="toggleFollowDirect('${id}', this)">
+                            ${isFollowing ? 'Following' : 'Follow'}
+                        </button>
+                    </div>`;
+            }
+        });
+    }
+
+    async function toggleFollowDirect(pageId, btn) {
+        const ref = db.collection("pages").doc(pageId);
+        const doc = await ref.get();
+        let followers = doc.data().followers || [];
+
+        if(followers.includes(myID)) {
+            followers = followers.filter(uid => uid !== myID);
+            btn.innerText = "Follow";
+            btn.classList.remove('btn-following-small');
+        } else {
+            followers.push(myID);
+            btn.innerText = "Following";
+            btn.classList.add('btn-following-small');
+        }
+        await ref.update({ followers });
+    }
+</script>
+<script src="app-engine.js"></script> 
+</body>
+</html>

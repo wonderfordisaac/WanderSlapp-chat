@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="ny">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile Posts</title>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
+    <link rel='stylesheet' href='https://cdn-uicons.flaticon.com/uicons-solid-rounded/css/uicons-solid-rounded.css'>
+    <link rel='stylesheet' href='https://cdn-uicons.flaticon.com/uicons-regular-rounded/css/uicons-regular-rounded.css'>
+    
+    <style>
+        body { font-family: system-ui; background: #fff; margin: 0; padding-bottom: 20px; color: #1c1e21; }
+        .feed-container { max-width: 550px; margin: auto; padding: 0; }
+
+        .post-card { background: white; padding: 15px; border-bottom: 8px solid #f0f2f5; position: relative; }
+        .post-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+        .post-header img { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; }
+        .post-header .meta { display: flex; flex-direction: column; }
+        .post-header b { font-size: 15px; color: #0a2b4f; }
+        .post-header small { font-size: 11px; color: #65676b; }
+        
+        /* Icon ya Delete */
+        .del-post-icon { position: absolute; top: 15px; right: 15px; color: #65676b; cursor: pointer; font-size: 18px; display: none; }
+        
+        .post-content { font-size: 15px; margin-bottom: 8px; line-height: 1.5; white-space: pre-wrap; word-wrap: break-word; overflow: hidden; position: relative; }
+        .post-content a { color: #0064e0; text-decoration: none; font-weight: 500; }
+        .clamp-text { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
+        .see-btn { color: #0a2b4f; font-weight: bold; cursor: pointer; display: none; margin-bottom: 10px; font-size: 14px; }
+        
+        /* Media Logic Grid */
+        .media-grid { display: grid; gap: 5px; grid-template-columns: 1fr 1fr; margin-top: 5px; border-radius: 10px; overflow: hidden; }
+        .media-grid.single { grid-template-columns: 1fr; }
+        .media-item { position: relative; width: 100%; height: 280px; background: #000; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .media-item img, .media-item video { width: 100%; height: 100%; object-fit: cover; }
+        
+        /* Video Play Icon */
+        .play-overlay { position: absolute; font-size: 45px; color: white; opacity: 0.8; z-index: 5; pointer-events: none; }
+        
+        /* Gallery Box Overlay */
+        .more-box { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); color: white; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; }
+
+        .post-actions { display: flex; justify-content: space-between; border-top: 1px solid #eee; padding-top: 12px; margin-top: 10px; }
+        .action-btn { cursor: pointer; color: #65676b; display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 15px; background: none; border: none; padding: 0; }
+        .action-btn i { font-size: 24px; } 
+        .liked i { color: #0a2b4f; }
+
+        #sharePopup { display: none; position: fixed; bottom: 0; left: 0; width: 100%; background: white; border-radius: 20px 20px 0 0; z-index: 4000; padding: 25px; text-align: center; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); }
+        .opt-text { display: block; padding: 18px; border-bottom: 1px solid #f0f0f0; font-size: 17px; cursor: pointer; }
+
+         /* SKELETON ANIMATION CSS (Sizinachedwetsa chilichonse) */
+        .shimmer {
+            background: #f6f7f8;
+            background-image: linear-gradient(to right, #f6f7f8 0%, #edeef1 20%, #f6f7f8 40%, #f6f7f8 100%);
+            background-repeat: no-repeat; background-size: 800px 104px;
+            animation: placeholderShimmer 1.5s linear infinite;
+        }
+        @keyframes placeholderShimmer { 0%{background-position: -468px 0} 100%{background-position: 468px 0} }
+        .sk-post { padding: 15px; border-bottom: 8px solid #f0f2f5; }
+        .sk-circle { width: 45px; height: 45px; border-radius: 50%; }
+        .sk-rect { height: 12px; border-radius: 4px; background: #eee; margin-bottom: 8px; }
+    </style>
+</head>
+<body>
+
+<div class="feed-container">
+     <div id="skeletonLoader">
+        <div class="sk-post">
+            <div style="display:flex; gap:10px; align-items:center; margin-bottom:15px;">
+                <div class="sk-circle shimmer"></div>
+                <div style="flex:1"><div class="sk-rect shimmer" style="width:40%"></div><div class="sk-rect shimmer" style="width:20%"></div></div>
+            </div>
+            <div class="sk-rect shimmer" style="width:100%; height:80px;"></div>
+        </div>
+    </div>
+
+    <div id="postsFeed"></div>
+</div>
+
+<div id="sharePopup">
+    <b>Share to-</b>
+    <div class="opt-text" onclick="shareTo('whatsapp')">Whatsapp</div>
+    <div class="opt-text" onclick="shareTo('facebook')">Facebook</div>
+    <div class="opt-text" onclick="shareTo('copy')">Copy link</div>
+    <button onclick="document.getElementById('sharePopup').style.display='none'" style="color:red; background:none; border:none; margin-top:15px; font-weight:bold;">Cancel</button>
+</div>
+
+<script>
+const firebaseConfig = {
+    apiKey: "AIzaSyDt_ayoflnFkRRnS2fXITY2EzJz0KcW5QA",
+    authDomain: "makert-bfb76.firebaseapp.com",
+    databaseURL: "https://makert-bfb76-default-rtdb.firebaseio.com",
+    projectId: "makert-bfb76",
+    storageBucket: "makert-bfb76.firebasestorage.app",
+    messagingSenderId: "245693362931",
+    appId: "1:245693362931:web:e15662a22dd50d2ac63d86"
+};
+
+firebase.initializeApp(firebaseConfig);
+const rtdb = firebase.database();
+const db = firebase.firestore();
+const auth = firebase.auth();
+
+let myID, currentPID;
+const urlParams = new URLSearchParams(window.location.search);
+const profileUID = urlParams.get('uid'); 
+
+auth.onAuthStateChanged(user => {
+    if(user) {
+        myID = user.uid;
+        loadProfilePosts(profileUID || myID);
+    }
+});
+
+function timeAgo(ts) {
+    if(!ts) return "now";
+    const s = Math.floor((new Date() - new Date(ts)) / 1000);
+    if (s < 60) return "now";
+    if (s < 3600) return Math.floor(s/60) + "min";
+    if (s < 86400) return Math.floor(s/3600) + "hr";
+    return Math.floor(s/86400) + "d";
+}
+
+function linkify(text) {
+    if(!text) return "";
+    let t = text.replace(/(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig, '<a href="$1" target="_blank">$1</a>');
+    t = t.replace(/@([^,.!?;:\n\r]+)/g, (match, name) => {
+        let trimmedName = name.trim();
+        return `<a href="seach.html?q=${encodeURIComponent(trimmedName)}" target="_top">@${trimmedName}</a>`;
+    });
+    t = t.replace(/#(\w+)/g, (match, tag) => {
+        return `<a href="seach.html?q=%23${tag}" target="_top">#${tag}</a>`;
+    });
+    return t;
+}
+
+function loadProfilePosts(targetUID) {
+    rtdb.ref("posts").orderByChild("uid").equalTo(targetUID).on('value', snap => {
+        // CHOTSANI SKELETON NTHAWI YOMWEYO DATA YAFIKA
+        const sk = document.getElementById("skeletonLoader");
+        if(sk) sk.style.display = "none";
+
+        const feed = document.getElementById("postsFeed");
+        feed.innerHTML = "";
+        let posts = [];
+        snap.forEach(child => { posts.push({id: child.key, ...child.val()}); });
+        
+        posts.reverse().forEach(p => {
+            db.collection("users").doc(p.uid).get().then(uDoc => {
+                const uData = uDoc.data() || {};
+                
+                // Smart Gallery Grid Logic
+                let mediaHtml = "";
+                if(p.media && p.media.length > 0) {
+                    const count = p.media.length;
+                    if(count === 1) {
+                        mediaHtml = `<div class="media-grid single"><div class="media-item" onclick='openGallery(${JSON.stringify(p.media)}, 0)'>${p.media[0].type === "video" ? '<i class="fi fi-sr-play play-overlay"></i><video src="'+p.media[0].url+'#t=0.5"></video>' : '<img src="'+p.media[0].url+'">'}</div></div>`;
+                    } else {
+                        mediaHtml = `
+                        <div class="media-grid">
+                            <div class="media-item" onclick='openGallery(${JSON.stringify(p.media)}, 0)'>
+                                ${p.media[0].type === "video" ? '<i class="fi fi-sr-play play-overlay"></i><video src="'+p.media[0].url+'#t=0.5"></video>' : '<img src="'+p.media[0].url+'">'}
+                            </div>
+                            <div class="media-item" onclick='openGallery(${JSON.stringify(p.media)}, 1)'>
+                                ${p.media[1].type === "video" ? '<i class="fi fi-sr-play play-overlay"></i><video src="'+p.media[1].url+'#t=0.5"></video>' : '<img src="'+p.media[1].url+'">'}
+                                ${count > 2 ? `<div class="more-box">+${count - 2}</div>` : ''}
+                            </div>
+                        </div>`;
+                    }
+                }
+
+                const card = document.createElement("div");
+                card.className = "post-card";
+                card.innerHTML = `
+                    <div class="del-post-icon" id="del_${p.id}" onclick="deletePost('${p.id}')"><i class="fi fi-rr-trash"></i></div>
+                    <div class="post-header"><img src="${uData.profilePhoto || 'https://i.ibb.co/7z5nDqK/avatar.png'}"><div class="meta"><b>${uData.fullName}</b><small>${timeAgo(p.createdAt)}</small></div></div>
+                    ${p.text ? `<div class="post-content clamp-text" id="txt_${p.id}">${linkify(p.text)}</div><span class="see-btn" id="btn_${p.id}" onclick="toggleText('txt_${p.id}','btn_${p.id}')">See more</span>` : ''}
+                    ${mediaHtml}
+                    <div class="post-actions">
+                        <div class="action-btn" id="l_${p.id}" onclick="toggleLike('${p.id}')"><i class="fi fi-sr-thumbs-up"></i> <span id="lc_${p.id}">0</span></div>
+                        <div class="action-btn" onclick="openComments('${p.id}','${p.uid}')"><i class="fi fi-sr-comment-alt"></i> <span id="cc_${p.id}">0</span></div>
+                        <div class="action-btn" onclick="openShare('${p.id}')"><i class="fi fi-rr-share"></i></div>
+                    </div>`;
+                
+                feed.appendChild(card);
+                if(myID === p.uid) document.getElementById(`del_${p.id}`).style.display = "block";
+                syncStats(p.id);
+
+                // Auto-detection ya See More
+                setTimeout(() => {
+                    const el = document.getElementById(`txt_${p.id}`);
+                    if(el && el.scrollHeight > el.offsetHeight) document.getElementById(`btn_${p.id}`).style.display = 'inline-block';
+                    window.parent.postMessage({ type: "SET_HEIGHT", height: document.body.scrollHeight }, "*");
+                }, 500);
+            });
+        });
+    });
+}
+
+function toggleText(tid, bid) {
+    const el = document.getElementById(tid);
+    el.classList.toggle('clamp-text');
+    document.getElementById(bid).innerText = el.classList.contains('clamp-text') ? "See more" : "See less";
+    window.parent.postMessage({ type: "SET_HEIGHT", height: document.body.scrollHeight }, "*");
+}
+
+function deletePost(pid) {
+    if(confirm("Fafaniza post imeneyi?")) {
+        rtdb.ref("posts").child(pid).remove();
+        rtdb.ref(`postStats/${pid}`).remove();
+    }
+}
+
+function syncStats(pid) {
+    rtdb.ref(`postStats/${pid}/likes`).on('value', s => { 
+        if(document.getElementById(`lc_${pid}`)) document.getElementById(`lc_${pid}`).innerText = s.numChildren(); 
+        if(document.getElementById(`l_${pid}`)) document.getElementById(`l_${pid}`).classList.toggle("liked", s.hasChild(myID)); 
+    });
+    rtdb.ref(`postStats/${pid}/comments`).on('value', s => { if(document.getElementById(`cc_${pid}`)) document.getElementById(`cc_${pid}`).innerText = s.numChildren(); });
+}
+
+function openComments(pid, ownerID) { window.parent.postMessage({ type: "OPEN_COMMENTS", pid: pid, ownerID: ownerID }, "*"); }
+function openGallery(media, idx) {
+    let content = media[idx].type === "video" ? `<video src="${media[idx].url}" controls autoplay style="width:100%;"></video>` : `<img src="${media[idx].url}" style="width:100%;">`;
+    window.parent.postMessage({ type: "FULL_SCREEN", content: content }, "*");
+}
+
+function toggleLike(pid) {
+    const ref = rtdb.ref(`postStats/${pid}/likes/${myID}`);
+    ref.once('value', s => { if(s.exists()) ref.remove(); else ref.set(true); });
+}
+
+function openShare(pid) { 
+    currentPID = pid;
+    document.getElementById("sharePopup").style.display = "block"; 
+}
+
+function shareTo(platform) {
+    const postUrl = window.location.origin + "/viewpost.html?id=" + currentPID;
+    if(platform === 'whatsapp') {
+        window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(postUrl)}`);
+    } else if(platform === 'facebook') {
+        window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(postUrl)}`);
+    } else if(platform === 'copy') {
+        navigator.clipboard.writeText(postUrl).then(() => alert("Link copied!"));
+    }
+    document.getElementById("sharePopup").style.display = "none";
+}
+</script>
+<script src="app-engine.js"></script> 
+</body>
+</html>

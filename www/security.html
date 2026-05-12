@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="ny">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Security Settings</title>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
+    <link rel='stylesheet' href='https://cdn-uicons.flaticon.com/uicons-solid-rounded/css/uicons-solid-rounded.css'>
+
+    <style>
+        :root { --main: #0a2b4f; --bg: #f0f2f5; --white: #ffffff; --red: #dc3545; --green: #28a745; }
+        body { font-family: system-ui; margin: 0; background: var(--bg); color: #1c1e21; }
+        
+        header { 
+            background: var(--main); 
+            color: white; 
+            padding: 15px; 
+            display: flex; 
+            align-items: center; 
+            font-weight: bold; 
+        }
+        .back-link { color: white; text-decoration: none; font-size: 20px; margin-right: 15px; display: flex; align-items: center; }
+        
+        .container { padding: 20px; max-width: 500px; margin: auto; }
+        
+        .card { 
+            background: var(--white); 
+            padding: 20px; 
+            border-radius: 12px; 
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1); 
+            text-align: center;
+        }
+
+        .menu-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 15px;
+            background: white;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            border: 1px solid #ddd;
+        }
+        .menu-item i { font-size: 20px; color: var(--main); }
+        .danger { border: 1px solid var(--red); }
+        .danger i, .danger span { color: var(--red); }
+
+        /* Sections Hidden by Default */
+        #passwordSection, #forgotSection, #deleteSection { display: none; flex-direction: column; gap: 15px; margin-top: 10px; }
+        
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            box-sizing: border-box;
+            font-size: 15px;
+            outline: none;
+        }
+        input:focus { border-color: var(--main); }
+
+        .btn-save {
+            background: var(--main);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+        }
+        .btn-delete { background: var(--red); }
+        .btn-save:disabled { background: #ccc; }
+
+        .loader {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid var(--main);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 10px auto;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .msg { font-size: 13px; margin-top: 10px; min-height: 18px; font-weight: 500; }
+        .cancel-btn { background: none; border: none; color: var(--red); cursor: pointer; margin-top: 10px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<header>
+    <a href="settings.html" class="back-link"><i class="fi fi-sr-arrow-left"></i></a>
+    <div>Security</div>
+</header>
+
+<div class="container">
+    <div id="mainSecurity">
+        <div class="menu-item" onclick="showSection('passwordSection')">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <i class="fi fi-sr-lock"></i>
+                <span>Change Password</span>
+            </div>
+            <i class="fi fi-sr-angle-small-right"></i>
+        </div>
+
+        <div class="menu-item" onclick="showSection('forgotSection')">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <i class="fi fi-sr-envelope"></i>
+                <span>Forgot Password?</span>
+            </div>
+            <i class="fi fi-sr-angle-small-right"></i>
+        </div>
+
+        <div class="menu-item danger" onclick="showSection('deleteSection')" style="margin-top: 30px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <i class="fi fi-sr-trash"></i>
+                <span>Delete Account</span>
+            </div>
+            <i class="fi fi-sr-angle-small-right"></i>
+        </div>
+    </div>
+
+    <div id="passwordSection" class="card">
+        <h3 style="margin:0;">Sinthani Password</h3>
+        <input type="password" id="currentPassword" placeholder="Password yakale">
+        <input type="password" id="newPassword" placeholder="Password yatsopano">
+        <input type="password" id="confirmPassword" placeholder="Tsimikizani yatsopanoyo">
+        <div id="loaderPass" class="loader"></div>
+        <button class="btn-save" id="saveBtn" onclick="handlePasswordChange()">SAVE PASSWORD</button>
+        <p id="msgPass" class="msg"></p>
+        <button class="cancel-btn" onclick="hideAllSections()">Cancel</button>
+    </div>
+
+    <div id="forgotSection" class="card">
+        <h3 style="margin:0;">Forgot Password</h3>
+        <p style="font-size: 13px; color: #666;">Tumizani reset link ku email yanu.</p>
+        <input type="email" id="forgotEmail" placeholder="Email Address">
+        <div id="loaderForgot" class="loader"></div>
+        <button class="btn-save" onclick="handleForgotPassword()">TUMIZANI LINK</button>
+        <p id="msgForgot" class="msg"></p>
+        <button class="cancel-btn" onclick="hideAllSections()">Cancel</button>
+    </div>
+
+    <div id="deleteSection" class="card">
+        <h3 style="margin:0; color: var(--red);">Delete Account</h3>
+        <p style="font-size: 13px; color: #666;">Izi zichotsa data yanu yonse ndipo sizingabwezedwe. Lowetsani password yanu kaye.</p>
+        <input type="password" id="deleteVerifyPass" placeholder="Confirm your password">
+        <div id="loaderDelete" class="loader"></div>
+        <button class="btn-save btn-delete" onclick="handleDeleteAccount()">DELETE PERMANENTLY</button>
+        <p id="msgDelete" class="msg"></p>
+        <button class="cancel-btn" onclick="hideAllSections()">Cancel</button>
+    </div>
+</div>
+
+<script>
+    // Firebase Config
+    const firebaseConfig = {
+        apiKey: "AIzaSyDt_ayoflnFkRRnS2fXITY2EzJz0KcW5QA",
+        authDomain: "makert-bfb76.firebaseapp.com",
+        databaseURL: "https://makert-bfb76-default-rtdb.firebaseio.com",
+        projectId: "makert-bfb76",
+        storageBucket: "makert-bfb76.firebasestorage.app",
+        messagingSenderId: "245693362931",
+        appId: "1:245693362931:web:e15662a22dd50d2ac63d86"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    function showSection(id) {
+        document.getElementById('mainSecurity').style.display = 'none';
+        document.getElementById(id).style.display = 'flex';
+        if(id === 'forgotSection' && auth.currentUser) document.getElementById('forgotEmail').value = auth.currentUser.email;
+    }
+
+    function hideAllSections() {
+        document.getElementById('mainSecurity').style.display = 'block';
+        document.querySelectorAll('.card').forEach(c => c.style.display = 'none');
+        document.querySelectorAll('input').forEach(i => i.value = "");
+        document.querySelectorAll('.msg').forEach(m => m.innerText = "");
+    }
+
+    // --- CHANGE PASSWORD LOGIC ---
+    async function handlePasswordChange() {
+        const user = auth.currentUser;
+        const oldP = document.getElementById('currentPassword').value;
+        const newP = document.getElementById('newPassword').value;
+        const confP = document.getElementById('confirmPassword').value;
+        const msg = document.getElementById('msgPass');
+        
+        if(newP !== confP) { msg.style.color = 'red'; msg.innerText = "Sizikufanana!"; return; }
+        
+        document.getElementById('loaderPass').style.display = 'block';
+        try {
+            const credential = firebase.auth.EmailAuthProvider.credential(user.email, oldP);
+            await user.reauthenticateWithCredential(credential);
+            await user.updatePassword(newP);
+            updateLocalProfile(user.email, newP);
+            msg.style.color = 'green'; msg.innerText = "Yasinthidwa!";
+            setTimeout(() => hideAllSections(), 2000);
+        } catch(e) { msg.style.color = 'red'; msg.innerText = e.message; }
+        document.getElementById('loaderPass').style.display = 'none';
+    }
+
+    // --- FORGOT PASSWORD LOGIC ---
+    async function handleForgotPassword() {
+        const email = document.getElementById('forgotEmail').value;
+        const msg = document.getElementById('msgForgot');
+        document.getElementById('loaderForgot').style.display = 'block';
+        try {
+            await auth.sendPasswordResetEmail(email);
+            msg.style.color = 'green'; msg.innerText = "Link yatumizidwa!";
+        } catch(e) { msg.style.color = 'red'; msg.innerText = e.message; }
+        document.getElementById('loaderForgot').style.display = 'none';
+    }
+
+    // --- DELETE ACCOUNT LOGIC ---
+    async function handleDeleteAccount() {
+        const user = auth.currentUser;
+        const pass = document.getElementById('deleteVerifyPass').value;
+        const msg = document.getElementById('msgDelete');
+        
+        if(!pass) { msg.innerText = "Lembani password!"; return; }
+        if(!confirm("Kodi mukutsimikiza kufuna kufuta account yanu?")) return;
+
+        document.getElementById('loaderDelete').style.display = 'block';
+        try {
+            const credential = firebase.auth.EmailAuthProvider.credential(user.email, pass);
+            await user.reauthenticateWithCredential(credential);
+            
+            // 1. Chotsani mu Firestore kaye
+            await db.collection("users").doc(user.uid).delete();
+            
+            // 2. Chotsani mu LocalStorage
+            removeFromLocal(user.email);
+            
+            // 3. Chotsani mu Firebase Auth
+            await user.delete();
+            
+            alert("Account yafutidwa.");
+            window.location.href = "index.html";
+        } catch(e) { msg.style.color = 'red'; msg.innerText = e.message; }
+        document.getElementById('loaderDelete').style.display = 'none';
+    }
+
+    // Helpers
+    function updateLocalProfile(email, newPass) {
+        let p = JSON.parse(localStorage.getItem('savedProfiles') || '[]');
+        p = p.map(u => { if(u.email === email) u.password = newPass; return u; });
+        localStorage.setItem('savedProfiles', JSON.stringify(p));
+    }
+
+    function removeFromLocal(email) {
+        let p = JSON.parse(localStorage.getItem('savedProfiles') || '[]');
+        p = p.filter(u => u.email !== email);
+        localStorage.setItem('savedProfiles', JSON.stringify(p));
+    }
+</script>
+<script src="app-engine.js"></script> 
+</body>
+</html>

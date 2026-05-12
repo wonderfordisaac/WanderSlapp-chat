@@ -1,0 +1,27 @@
+<?xml version='1.0' encoding='utf-8'?>
+<widget id="com.wanderslapp.myapp" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
+    <!-- Dzina la App yomwe idzaoneke pafoni -->
+    <name>WanderSlapp</name>
+
+    <description>
+        App for chating, streeming and make monay.
+    </description>
+
+    <author email="wonderfordisaac@gmail.com" href="https://github.com/wonderfordisaac">
+        Dzina Lanu
+    </author>
+
+    <!-- File lomwe liyenera kuyamba kutseguka -->
+    <content src="index.html" />
+
+    <!-- Icon ya App (Iyenera kukhala mu www/icon.png) -->
+    <icon src="www/icon.ico" />
+
+    <!-- Kuti App yanu izitha kupeza ma files am'kati -->
+    <access origin="*" />
+    <allow-intent href="http://*/*" />
+    <allow-intent href="https://*/*" />
+
+    <preference name="loglevel" value="DEBUG" />
+</widget>
+

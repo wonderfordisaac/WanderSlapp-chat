@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="ny">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WanderSlapp</title>
+    
+    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-solid-rounded/css/uicons-solid-rounded.css">
+    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-regular-rounded/css/uicons-regular-rounded.css">
+    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-brands/css/uicons-brands.css">
+
+    
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-database-compat.js"></script>
+
+    <style>
+        :root {
+            --bg: #f0f2f5;
+            --header-bg: #0a142b;
+            --card-bg: #ffffff;
+            --text-main: #0a2b4f;
+            --logout-color: #ff4d4d;
+            --badge-bg: #ff3b30;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            padding: 0;
+            color: var(--text-main);
+            min-height: 100vh;
+        }
+
+        header {
+            background: var(--header-bg);
+            padding: 18px 15px;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .back-link { color: white; text-decoration: none; display: flex; align-items: center; }
+        header h2 { margin: 0; font-size: 18px; font-weight: 800; }
+
+        .menu-grid {
+            padding: 20px 15px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .menu-item {
+            background: var(--card-bg);
+            border-radius: 20px;
+            padding: 25px 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            color: var(--text-main);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            transition: transform 0.2s;
+            border: 1px solid #eee;
+            position: relative; /* Kuti badge ithe kukhala pamwamba */
+        }
+
+        .menu-item:active { transform: scale(0.95); }
+
+        /* BADGE STYLE */
+        .badge {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            background: var(--badge-bg);
+            color: white;
+            font-size: 11px;
+            font-weight: bold;
+            padding: 2px 7px;
+            border-radius: 10px;
+            display: none; /* Idzaoneka pokhapokha nambala ikalipo */
+            box-shadow: 0 2px 5px rgba(255,0,0,0.3);
+            border: 2px solid white;
+        }
+
+        .menu-item i { font-size: 32px; margin-bottom: 12px; }
+        .menu-item span { font-size: 11px; font-weight: 700; text-transform: uppercase; }
+
+        /* Colors */
+        .page i { color: #007bff; }
+        .group i { color: #6f42c1; }
+        .settings i { color: #555; }
+        .market i { color: #fd7e14; }
+        .games i { color: #e83e8c; }
+        .mon i { color: #28a745; }
+
+        .logout-container { padding: 40px 15px 60px; display: flex; justify-content: center; }
+        .logout-btn {
+            background: white; color: var(--logout-color); border: 2px solid var(--logout-color);
+            padding: 12px 60px; border-radius: 50px; font-weight: 800; cursor: pointer; outline: none;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <a href="dashboard.html" class="back-link"><i class="fi fi-sr-arrow-left"></i></a>
+    <h2>MENU</h2>
+</header>
+
+<div class="menu-grid">
+    <a href="ads-boost.html" class="menu-item market">
+        <i class="fi fi-sr-shop"></i>
+        <span>Self ads boost Market</span>
+    </a>
+
+    <a href="page.html" class="menu-item page">
+        <div id="pageBadge" class="badge">0</div>
+        <i class="fi fi-sr-document"></i>
+        <span>Page</span>
+    </a>
+
+    <a href="group.html" class="menu-item group">
+        <div id="groupBadge" class="badge">0</div>
+        <i class="fi fi-sr-users-alt"></i>
+        <span>Group</span>
+    </a>
+
+    <a href="settings.html" class="menu-item settings">
+        <i class="fi fi-sr-settings"></i>
+        <span>Settings</span>
+    </a>
+
+    <a href="market.html" class="menu-item market">
+        <i class="fi fi-sr-shop"></i>
+        <span>Free Market</span>
+    </a>
+
+    <a href="games.html" class="menu-item games">
+        <i class="fi fi-sr-gamepad"></i>
+        <span>Games</span>
+    </a>
+
+    <a href="monitaizetion.html" class="menu-item mon">
+        <i class="fi fi-sr-stats"></i>
+        <span>Monitazation</span>
+    </a>
+    
+    <a href="radio.html" class="menu-item mon">
+        <i class="fi fi-rr-radio"></i>
+        <span>Radio</span>
+    </a>
+
+    <a href="photoedt.html" class="menu-item mon">
+        <i class="fi fi-rr-aperture"></i>
+        <span>Photo editor</span>
+    </a>
+
+    <a href="https://wanderprograms.github.io/blanchMusic/" class="menu-item mon">
+        <i class="fi fi-sr-music-alt"></i>
+        <span>Music</span>
+    </a>
+</div>
+
+<div class="logout-container">
+    <button class="logout-btn" onclick="logoutUser()">LOGOUT</button>
+</div>
+
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyDt_ayoflnFkRRnS2fXITY2EzJz0KcW5QA",
+        authDomain: "makert-bfb76.firebaseapp.com",
+        databaseURL: "https://makert-bfb76-default-rtdb.firebaseio.com",
+        projectId: "makert-bfb76",
+        storageBucket: "makert-bfb76.firebasestorage.app",
+        messagingSenderId: "245693362931",
+        appId: "1:245693362931:web:e15662a22dd50d2ac63d86"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const rtdb = firebase.database();
+
+    // 1. UPDATE BADGES (Luso loyang'ana notifications mu RTDB)
+    function updateMenuBadges(uid) {
+        // Chitsanzo: Yang'anani ma notification a ma group
+        rtdb.ref(`notifications/${uid}/groups`).on('value', snapshot => {
+            const count = snapshot.val() || 0;
+            const badge = document.getElementById('groupBadge');
+            if(count > 0) {
+                badge.innerText = count > 9 ? '9+' : count;
+                badge.style.display = 'block';
+            } else {
+                badge.style.display = 'none';
+            }
+        });
+
+        // Chitsanzo: Yang'anani ma notification a ma page
+        rtdb.ref(`notifications/${uid}/pages`).on('value', snapshot => {
+            const count = snapshot.val() || 0;
+            const badge = document.getElementById('pageBadge');
+            if(count > 0) {
+                badge.innerText = count > 9 ? '9+' : count;
+                badge.style.display = 'block';
+            } else {
+                badge.style.display = 'none';
+            }
+        });
+    }
+
+    auth.onAuthStateChanged(user => {
+        if (user) {
+            updateMenuBadges(user.uid);
+        }
+    });
+
+    function logoutUser() {
+        if (confirm("Kodi mukufuna kutuluka?")) {
+            auth.signOut().then(() => { window.location.href = "index.html"; });
+        }
+    }
+</script>
+<script src="app-engine.js"></script> 
+</body>
+</html>

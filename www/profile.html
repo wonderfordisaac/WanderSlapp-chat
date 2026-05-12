@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="ny">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WanderSlapp - Profile</title>
+  <link rel='stylesheet' href='https://cdn-uicons.flaticon.com/uicons-solid-rounded/css/uicons-solid-rounded.css'>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #fff; margin: 0; padding: 0; }
+    
+    .nav-header { position: sticky; top: 0; background: #fff; z-index: 1000; padding: 10px 15px; display: flex; align-items: center; border-bottom: 1px solid #f0f2f5; }
+    .back-btn { width: 32px; height: 32px; background: #0a2b4f; color: #fff; border: none; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
+    .profile-content { width: 100%; max-width: 600px; margin: 0 auto; }
+    .cover-section { width: 100%; height: 160px; background: #ddd; position: relative; cursor: pointer; }
+    .cover-section img { width: 100%; height: 100%; object-fit: cover; }
+    
+    .profile-photo-wrapper { width: 100px; height: 100px; border-radius: 50%; border: 4px solid #fff; position: absolute; bottom: -50px; left: 20px; background: #eee; overflow: hidden; z-index: 5; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+    .profile-photo-wrapper img { width: 100%; height: 100%; object-fit: cover; }
+    
+    .profile-info-bar { padding: 60px 15px 15px 15px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+    .profile-name { font-size: 20px; font-weight: 800; color: #0a2b4f; }
+    
+    /* STYLE YA SEE MORE BUTTON */
+    #seeMoreBtn { margin-top: 5px; padding: 4px 12px; min-width: auto; font-size: 11px; display: none; }
+
+    .action-btn { padding: 8px 16px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 13px; min-width: 100px; }
+    .btn-secondary { background: #e4e6eb; color: #050505; }
+    .btn-primary { background: #0a2b4f; color: white; }
+    .btn-pending { background: #ffd700; color: #000; cursor: not-allowed; }
+
+    .compose-area { display: none; padding: 15px; background: #fff; border-top: 8px solid #f0f2f5; border-bottom: 8px solid #f0f2f5; gap: 10px; }
+    .compose-box { flex: 1; background: #0b1730; border-radius: 12px; color: #fff; padding: 10px; height: 45px; border: 1px solid #254a83; cursor: pointer; width: 100%; }
+
+    #profilePostFrame { width: 100%; border: none; display: block; }
+
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 2000; align-items: center; justify-content: center; }
+    .modal-box { background: white; width: 85%; max-width: 300px; border-radius: 12px; overflow: hidden; }
+    .modal-box button { width: 100%; padding: 15px; border: none; background: white; font-size: 16px; border-bottom: 1px solid #eee; cursor: pointer; }
+    
+    #fsOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 5000; flex-direction: column; align-items: center; justify-content: center; }
+    .close-fs { position: absolute; top: 20px; right: 20px; color: #fff; font-size: 30px; cursor: pointer; }
+    #fsContent img { max-width: 100%; max-height: 90vh; }
+
+    #commentOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 10000; background: white; }
+    #commentFrame { width: 100%; height: 100%; border: none; }
+  </style>
+
+  <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-database-compat.js"></script>
+</head>
+<body>
+
+<div id="commentOverlay">
+    <iframe id="commentFrame" src=""></iframe>
+</div>
+
+<div class="nav-header">
+  <button class="back-btn" onclick="location.href='dashboard.html'"><i class="fi fi-sr-arrow-left"></i></button>
+  <span style="margin-left: 15px; font-weight: bold; color: #0a2b4f;">Profile</span>
+</div>
+
+<div class="profile-content">
+  <div class="cover-section" id="coverDiv" onclick="handlePhotoClick('cover')">
+    <img id="coverImg" src="https://i.ibb.co/7z5nDqK/avatar.png">
+    <div class="profile-photo-wrapper" onclick="event.stopPropagation(); handlePhotoClick('profile')">
+      <img id="profileImg" src="https://i.ibb.co/7z5nDqK/avatar.png">
+    </div>
+  </div>
+
+  <div class="profile-info-bar">
+    <div>
+      <div class="profile-name" id="userName">...</div>
+      <button id="seeMoreBtn" class="action-btn btn-secondary">
+        See More <i class="fi fi-sr-angle-small-right"></i>
+      </button>
+    </div>
+    <div id="btnContainer"></div>
+  </div>
+
+  <div class="compose-area" id="composeArea">
+      <textarea class="compose-box" placeholder="What you wont to post now?..." readonly onclick="location.href='rightpostprofile.html'"></textarea>
+  </div>
+
+  <iframe id="profilePostFrame" src="" scrolling="no"></iframe>
+</div>
+
+<div id="optionModal" class="modal" onclick="this.style.display='none'">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <button onclick="viewFull()">View Photo</button>
+    <button onclick="document.getElementById(activeType + 'Inp').click(); document.getElementById('optionModal').style.display='none'">Upload New Photo</button>
+    <button onclick="document.getElementById('optionModal').style.display='none'" style="color:red;">Cancel</button>
+  </div>
+</div>
+
+<div id="fsOverlay" onclick="this.style.display='none'">
+    <span class="close-fs">&times;</span>
+    <div id="fsContent"></div>
+</div>
+
+<input type="file" id="coverInp" accept="image/*" style="display:none" onchange="uploadPhoto(this, 'cover')">
+<input type="file" id="profileInp" accept="image/*" style="display:none" onchange="uploadPhoto(this, 'profile')">
+    
+<script src="send-notf.js"></script>
+<script>
+const firebaseConfig = {
+    apiKey: "AIzaSyDt_ayoflnFkRRnS2fXITY2EzJz0KcW5QA",
+    authDomain: "makert-bfb76.firebaseapp.com",
+    databaseURL: "https://makert-bfb76-default-rtdb.firebaseio.com",
+    projectId: "makert-bfb76",
+    storageBucket: "makert-bfb76.firebasestorage.app",
+    messagingSenderId: "245693362931",
+    appId: "1:245693362931:web:e15662a22dd50d2ac63d86"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+const rtdb = firebase.database();
+
+db.enablePersistence()
+  .catch((err) => {
+      if (err.code == 'failed-precondition') {
+          console.log("Persistence failed: Multiple tabs open");
+      } else if (err.code == 'unimplemented') {
+          console.log("Persistence not supported in this browser");
+      }
+  });
+
+let myID, currentUID, profileData, activeType;
+const urlParams = new URLSearchParams(window.location.search);
+const targetUID = urlParams.get('uid') || urlParams.get('id');
+
+auth.onAuthStateChanged(user => {
+    if(user) {
+        myID = user.uid;
+        currentUID = targetUID || myID;
+        loadUser();
+        document.getElementById("profilePostFrame").src = `profilepost.html?uid=${currentUID}`;
+        if(currentUID === myID) document.getElementById("composeArea").style.display = "flex";
+    }
+});
+
+async function loadUser() {
+    const doc = await db.collection("users").doc(currentUID).get();
+    if(doc.exists) {
+        profileData = doc.data();
+        document.getElementById("userName").textContent = profileData.fullName;
+        document.getElementById("profileImg").src = profileData.profilePhoto || 'https://i.ibb.co/7z5nDqK/avatar.png';
+        document.getElementById("coverImg").src = profileData.coverPhoto || 'https://i.ibb.co/7z5nDqK/avatar.png';
+        
+        // LOGIC YA SEE MORE BUTTON
+        const seeMoreBtn = document.getElementById("seeMoreBtn");
+        if(currentUID !== myID) {
+            seeMoreBtn.style.display = "block"; // Onetsa ngati si mwini wake
+            seeMoreBtn.onclick = () => {
+                location.href = `useralldetail.html?uid=${currentUID}`;
+            };
+        } else {
+            seeMoreBtn.style.display = "none"; // Bisa ngati ndi mwini wake
+        }
+
+        setupButtons();
+    }
+}
+
+async function setupButtons() {
+    const btnCon = document.getElementById("btnContainer");
+    if(currentUID === myID) {
+        btnCon.innerHTML = `<button class="action-btn btn-secondary" onclick="location.href='edtprofile.html'">Edit Profile</button>`;
+    } else {
+        const q1 = await db.collection("friendRequests").where("from", "==", myID).where("to", "==", currentUID).get();
+        const q2 = await db.collection("friendRequests").where("from", "==", currentUID).where("to", "==", myID).get();
+        
+        let status = null;
+        if(!q1.empty) status = q1.docs[0].data().status;
+        if(!q2.empty) status = q2.docs[0].data().status;
+
+        if(status === "confirmed") {
+            btnCon.innerHTML = `<button class="action-btn btn-primary" onclick="location.href='massege.html?uid=${currentUID}'">Message</button>`;
+        } else if(status === "pending") {
+            btnCon.innerHTML = `<button class="action-btn btn-pending" disabled>Request Sent</button>`;
+        } else {
+            btnCon.innerHTML = `<button class="action-btn btn-primary" onclick="sendFriendRequest()">Add Friend</button>`;
+        }
+    }
+}
+
+async function sendFriendRequest() {
+    try {
+        await db.collection("friendRequests").add({
+            from: myID,
+            to: currentUID,
+            status: "pending",
+            timestamp: Date.now()
+        });
+        
+        if(typeof sendSmartNotification === "function") {
+            sendSmartNotification(currentUID, 'friend_request', 'fr_' + myID);
+        }
+        
+        alert("Friend request yatumizidwa!");
+        setupButtons();
+    } catch(e) {
+        console.error(e);
+    }
+}
+
+function handlePhotoClick(type) {
+    activeType = type;
+    if(currentUID === myID) {
+        document.getElementById("optionModal").style.display = "flex";
+    } else {
+        viewFull();
+    }
+}
+
+function viewFull() {
+    const url = activeType === 'cover' ? profileData.coverPhoto : profileData.profilePhoto;
+    if(!url) return;
+    document.getElementById("fsContent").innerHTML = `<img src="${url}">`;
+    document.getElementById("fsOverlay").style.display = "flex";
+}
+
+window.addEventListener("message", (e) => {
+    if (e.data.type === "SET_HEIGHT") {
+        document.getElementById("profilePostFrame").style.height = e.data.height + "px";
+    }
+    if (e.data.type === "FULL_SCREEN") {
+        document.getElementById("fsContent").innerHTML = e.data.content;
+        document.getElementById("fsOverlay").style.display = "flex";
+    }
+    if (e.data.type === "OPEN_COMMENTS") {
+        const overlay = document.getElementById("commentOverlay");
+        const frame = document.getElementById("commentFrame");
+        frame.src = `comment.html?pid=${e.data.pid}&owner=${e.data.owner}`; 
+        overlay.style.display = "block";
+        document.body.style.overflow = "hidden";
+    }
+    if (e.data.type === "CLOSE_COMMENTS") {
+        document.getElementById("commentOverlay").style.display = "none";
+        document.body.style.overflow = "auto";
+    }
+});
+
+async function uploadPhoto(input, type) {
+    const file = input.files[0];
+    if(!file) return;
+    const apiKey = "6cd76cd441b1c0779a48c166439c8ffe";
+    const formData = new FormData();
+    formData.append("image", file);
+    const res = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, { method: "POST", body: formData });
+    const data = await res.json();
+    const url = data.data.url;
+    const update = {};
+    update[type === 'cover' ? 'coverPhoto' : 'profilePhoto'] = url;
+    await db.collection("users").doc(myID).update(update);
+    location.reload();
+}
+</script>
+  <script src="sweech.js"></script>
+  <script src="app-engine.js"></script> 
+</body>
+</html>

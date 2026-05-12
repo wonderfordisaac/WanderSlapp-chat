@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="ny">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Members - WanderSlapp</title>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
+
+    <style>
+        :root { --main: #0a2b4f; --red: #ff4d4d; --green: #28a745; --bg: #f0f2f5; }
+        body { font-family: system-ui; background: var(--bg); margin: 0; padding: 15px; }
+        header { background: var(--main); color: white; padding: 15px; display: flex; align-items: center; gap: 15px; border-radius: 8px; position: sticky; top: 0; z-index: 100; }
+        
+        .search-box { margin: 15px 0; display: flex; gap: 10px; }
+        .search-box input { flex: 1; padding: 12px 15px; border-radius: 25px; border: 1px solid #ddd; outline: none; }
+
+        .lock-btn { width: 100%; padding: 15px; border-radius: 12px; border: none; font-weight: bold; cursor: pointer; color: white; margin-bottom: 15px; font-size: 14px; }
+        .locked { background: var(--red); }
+        .unlocked { background: var(--green); }
+
+        .member-card { background: white; padding: 12px; border-radius: 12px; margin-bottom: 10px; display: flex; align-items: center; gap: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .member-info { flex: 1; display: flex; align-items: center; gap: 10px; cursor: pointer; }
+        .member-info img { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; background: #eee; }
+        .member-info b { font-size: 15px; color: var(--main); }
+        
+        .action-btns { display: flex; flex-direction: column; gap: 5px; }
+        .btn-sm { border: none; padding: 6px 10px; border-radius: 6px; font-size: 10px; font-weight: bold; cursor: pointer; color: white; }
+        .btn-remove { background: var(--red); }
+        .btn-admin { background: var(--main); }
+        .btn-mute { background: #e67e22; }
+
+        /* Popups */
+        .popup { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 300; justify-content: center; align-items: center; }
+        .popup-box { background: white; padding: 20px; border-radius: 15px; width: 85%; max-width: 400px; }
+        .popup-box h3 { margin-top: 0; font-size: 18px; }
+        .popup-box select, .popup-box button { width: 100%; padding: 12px; margin-top: 10px; border-radius: 8px; border: 1px solid #ddd; font-weight: bold; }
+
+        #userPostsView { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 200; flex-direction: column; }
+        .post-list { flex: 1; overflow-y: auto; padding: 15px; background: #e5ddd5; }
+        .post-item { background: white; padding: 10px; border-radius: 8px; margin-bottom: 10px; position: relative; }
+        .del-post-btn { position: absolute; top: 10px; right: 10px; color: var(--red); border: none; background: none; font-size: 20px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<header>
+    <span onclick="goBack()" style="cursor:pointer; font-size: 20px;">←</span>
+    <b id="pageTitle">Manage Group</b>
+</header>
+
+<div id="mainView">
+    <div class="search-box">
+        <input type="text" id="searchMember" placeholder="Saka member..." oninput="filterMembers()">
+    </div>
+
+    <button id="groupLockBtn" class="lock-btn" onclick="toggleGroupLock()">Checking status...</button>
+
+    <div id="membersList">Kufufuza ma members...</div>
+</div>
+
+<div id="mutePopup" class="popup">
+    <div class="popup-box">
+        <h3 id="muteUserName">Mute Member</h3>
+        <label>Sankhani Nthawi:</label>
+        <select id="muteDuration">
+            <option value="1">1 Hour</option>
+            <option value="5">5 Hours</option>
+            <option value="12">12 Hours</option>
+            <option value="24">24 Hours (1 Day)</option>
+            <option value="168">1 Week</option>
+        </select>
+        <button class="btn-mute" style="color:white;" onclick="confirmMute()">MUTE NOW</button>
+        <button style="background:#eee; border:none;" onclick="closePopup()">CANCEL</button>
+    </div>
+</div>
+
+<div id="userPostsView">
+    <header>
+        <span onclick="closeUserPosts()" style="cursor:pointer; font-size: 20px;">←</span>
+        <b id="viewUserName">User Posts</b>
+    </header>
+    <div id="postContainer" class="post-list"></div>
+</div>
+
+<script>
+const firebaseConfig = {
+    apiKey: "AIzaSyDt_ayoflnFkRRnS2fXITY2EzJz0KcW5QA",
+    authDomain: "makert-bfb76.firebaseapp.com",
+    databaseURL: "https://makert-bfb76-default-rtdb.firebaseio.com",
+    projectId: "makert-bfb76",
+    storageBucket: "makert-bfb76.firebasestorage.app",
+    messagingSenderId: "245693362931",
+    appId: "1:245693362931:web:e15662a22dd50d2ac63d86"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore(), rtdb = firebase.database(), auth = firebase.auth();
+
+const gid = new URLSearchParams(window.location.search).get('id');
+let myID, groupData, selectedUser = null;
+
+auth.onAuthStateChanged(user => {
+    if(user && gid) {
+        myID = user.uid;
+        listenToGroup();
+    }
+});
+
+function listenToGroup() {
+    db.collection("groups").doc(gid).onSnapshot(doc => {
+        groupData = doc.data();
+        if(groupData.adminID !== myID) {
+            alert("Ma Admin okha!"); location.href = 'group.html';
+        }
+        updateLockButton();
+        renderMembers();
+    });
+}
+
+function updateLockButton() {
+    const btn = document.getElementById('groupLockBtn');
+    const isLocked = groupData.settings && groupData.settings.adminOnly;
+    btn.innerText = isLocked ? "🔓 UNLOCK GROUP (Allow All)" : "🔒 LOCK GROUP (Admin Only)";
+    btn.className = isLocked ? "lock-btn unlocked" : "lock-btn locked";
+}
+
+async function toggleGroupLock() {
+    const currentStatus = groupData.settings && groupData.settings.adminOnly;
+    await db.collection("groups").doc(gid).update({
+        "settings.adminOnly": !currentStatus
+    });
+}
+
+async function renderMembers() {
+    const listDiv = document.getElementById('membersList');
+    listDiv.innerHTML = "";
+    for(let uid of groupData.members) {
+        const uDoc = await db.collection("users").doc(uid).get();
+        const u = uDoc.data();
+        if(u) {
+            const isAdmin = groupData.admins && groupData.admins.includes(uid);
+            const isOwner = groupData.adminID === uid;
+            listDiv.innerHTML += `
+                <div class="member-card" data-name="${u.fullName.toLowerCase()}">
+                    <div class="member-info" onclick="viewUserPosts('${uid}', '${u.fullName}')">
+                        <img src="${u.profilePhoto || 'https://i.ibb.co/7z5nDqK/avatar.png'}">
+                        <div><b>${u.fullName}</b> ${isOwner ? '<br><small>Owner</small>' : ''}</div>
+                    </div>
+                    <div class="action-btns">
+                        ${!isOwner ? `
+                            <button class="btn-sm btn-remove" onclick="removeMember('${uid}', '${u.fullName}')">REMOVE</button>
+                            <button class="btn-sm btn-mute" onclick="openMutePopup('${uid}', '${u.fullName}')">MUTE</button>
+                            <button class="btn-sm btn-admin" onclick="toggleAdmin('${uid}', ${isAdmin})">
+                                ${isAdmin ? 'DEMOTE' : 'MAKE ADMIN'}
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>`;
+        }
+    }
+}
+
+function filterMembers() {
+    let val = document.getElementById('searchMember').value.toLowerCase();
+    document.querySelectorAll('.member-card').forEach(c => {
+        c.style.display = c.dataset.name.includes(val) ? 'flex' : 'none';
+    });
+}
+
+// MUTE LOGIC
+function openMutePopup(uid, name) {
+    selectedUser = { uid, name };
+    document.getElementById('muteUserName').innerText = "Mute " + name;
+    document.getElementById('mutePopup').style.display = 'flex';
+}
+
+function closePopup() { document.getElementById('mutePopup').style.display = 'none'; }
+
+async function confirmMute() {
+    const hours = document.getElementById('muteDuration').value;
+    const until = Date.now() + (hours * 60 * 60 * 1000);
+    
+    await db.collection("groups").doc(gid).collection("mutedUsers").doc(selectedUser.uid).set({
+        mutedUntil: until,
+        name: selectedUser.name
+    });
+    
+    alert(`${selectedUser.name} waletsedwa kulemba kwa maola ${hours}.`);
+    closePopup();
+}
+
+async function removeMember(uid, name) {
+    if(confirm("Kuchotsa " + name + "?")) {
+        await db.collection("groups").doc(gid).update({
+            members: firebase.firestore.FieldValue.arrayRemove(uid),
+            admins: firebase.firestore.FieldValue.arrayRemove(uid),
+            memberCount: firebase.firestore.FieldValue.increment(-1)
+        });
+    }
+}
+
+async function toggleAdmin(uid, status) {
+    const act = status ? firebase.firestore.FieldValue.arrayRemove(uid) : firebase.firestore.FieldValue.arrayUnion(uid);
+    await db.collection("groups").doc(gid).update({ admins: act });
+}
+
+function viewUserPosts(uid, name) {
+    document.getElementById('viewUserName').innerText = name + "'s Posts";
+    document.getElementById('userPostsView').style.display = 'flex';
+    const container = document.getElementById('postContainer');
+    container.innerHTML = "Loading...";
+
+    rtdb.ref(`groupPosts/${gid}`).orderByChild('uid').equalTo(uid).on('value', snap => {
+        container.innerHTML = "";
+        snap.forEach(child => {
+            const p = child.val();
+            container.innerHTML += `
+                <div class="post-item">
+                    <button class="del-post-btn" onclick="deletePost('${child.key}')">×</button>
+                    <div>${p.text || '[Media]'}</div>
+                    ${p.url ? `<img src="${p.url}" style="width:100%; margin-top:5px; border-radius:5px;">` : ''}
+                </div>`;
+        });
+    });
+}
+
+function deletePost(pid) {
+    if(confirm("Delete post?")) rtdb.ref(`groupPosts/${gid}/${pid}`).remove();
+}
+
+function closeUserPosts() { document.getElementById('userPostsView').style.display = 'none'; }
+function goBack() { location.href = 'group.html?id=' + gid; }
+</script>
+<script src="app-engine.js"></script> 
+</body>
+</html>

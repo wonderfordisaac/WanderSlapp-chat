@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="ny">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>WanderSlapp</title>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
+    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-solid-rounded/css/uicons-solid-rounded.css">
+    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-regular-rounded/css/uicons-regular-rounded.css">
+    <style>
+        :root { --bg: #0a142b; --text: #f6fbff; --accent: #25d366; }
+        body { font-family: system-ui; margin: 0; background: #f0f2f5; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        
+        .header { background: var(--bg); color: white; padding: 10px 15px; display: flex; align-items: center; gap: 10px; height: 60px; z-index: 1000; flex-shrink: 0; }
+        .header-info { display: flex; align-items: center; gap: 10px; flex: 1; cursor: pointer; }
+        #headerPic { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; display: none; }
+        .status-box { display: flex; flex-direction: column; }
+        #userStatus { font-size: 11px; color: #25d366; }
+        
+        #friendListSection { flex: 1; overflow-y: auto; padding: 10px; }
+        .friend-card { background: white; padding: 12px; border-radius: 12px; display: flex; align-items: center; gap: 12px; margin-bottom: 8px; cursor: pointer; position: relative; }
+        .friend-card img { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; }
+        .u-badge { background: #25d366; color: white; font-size: 10px; min-width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; position: absolute; right: 15px; font-weight: bold; }
+        
+        #chatSection { display: none; flex-direction: column; height: 100%; background: #e5ddd5; position: relative; overflow: hidden; }
+        
+        #messagesContainer { 
+            flex: 1; 
+            overflow-y: scroll; 
+            padding: 15px; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 10px; 
+            padding-bottom: 120px; 
+            -webkit-overflow-scrolling: touch;
+            scroll-behavior: smooth;
+        }
+
+        .msg { max-width: 80%; padding: 10px; border-radius: 15px; font-size: 14px; position: relative; word-wrap: break-word; }
+        .sent { align-self: flex-end; background: #0a2b4f; color: white; border-bottom-right-radius: 2px; }
+        .received { align-self: flex-start; background: white; color: black; border-bottom-left-radius: 2px; }
+
+        .input-area { 
+            background: white; padding: 12px; display: flex; align-items: center; gap: 8px; position: absolute; 
+            bottom: 20px; left: 10px; right: 10px; z-index: 2000; border-radius: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+        }
+        
+        .input-area input { flex: 1; padding: 12px 5px; border: none; outline: none; font-size: 16px; background: transparent; }
+        .icon-btn { cursor: pointer; font-size: 24px; color: #0a2b4f; }
+        
+        #recTimerLabel { font-size: 14px; color: red; font-weight: bold; display: none; margin-left: 10px; animation: blink 1s infinite; }
+        @keyframes blink { 50% { opacity: 0; } }
+
+        /* FULL SCREEN IMAGE VIEWER CSS */
+        #viewerOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 3000; flex-direction: column; justify-content: center; align-items: center; }
+        #viewerImg { max-width: 100%; max-height: 80%; object-fit: contain; }
+        .viewer-close { position: absolute; top: 20px; right: 20px; color: white; font-size: 35px; cursor: pointer; }
+        .chat-img { width: 200px; border-radius: 10px; cursor: pointer; margin-top: 5px; }
+
+        #overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2500; }
+        #msgOptions { display: none; position: fixed; bottom: 0; width: 100%; background: white; z-index: 2600; border-radius: 20px 20px 0 0; padding: 15px 0; flex-direction: column; align-items: center; }
+        .opt-btn { width: 90%; padding: 15px; text-align: center; font-weight: bold; border-bottom: 1px solid #eee; }
+        
+        /* VOICE PROGRESS STYLE */
+        .voice-play { background: #25d366; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; color: white; cursor: pointer; flex-shrink: 0; }
+        .v-track { flex: 1; height: 4px; background: #ddd; border-radius: 2px; position: relative; min-width: 100px; }
+        .v-progress { position: absolute; height: 100%; background: #25d366; width: 0%; border-radius: 2px; }
+    </style>
+</head>
+<body>
+    
+<div id="viewerOverlay">
+    <span class="viewer-close" onclick="closeViewer()">×</span>
+    <img id="viewerImg" src="">
+    <div class="viewer-nav" style="position: absolute; bottom: 40px; display: flex; gap: 60px; color: white; font-size: 40px;">
+        <i class="fi fi-rr-angle-circle-left" onclick="navImg(-1)" style="cursor:pointer"></i>
+        <i class="fi fi-rr-angle-circle-right" onclick="navImg(1)" style="cursor:pointer"></i>
+    </div>
+</div>
+<div id="overlay" onclick="closePop()"></div>
+<div id="msgOptions">
+    <div class="opt-btn" onclick="deleteMessage('me')">Delete for me</div>
+    <div class="opt-btn" id="delAllBtn" style="color:red" onclick="deleteMessage('everyone')">Delete for everyone</div>
+    <div class="opt-btn" onclick="closePop()" style="color:grey">Cancel</div>
+</div>
+
+<div class="header">
+    <div onclick="goBack()" style="cursor:pointer; font-size:20px;">←</div>
+    <div class="header-info" onclick="goToProfile()">
+        <img id="headerPic" src="">
+        <div class="status-box">
+            <b id="chatTitle">Massege chating</b>
+            <span id="userStatus"></span>
+        </div>
+    </div>
+</div>
+
+<div id="friendListSection"><div id="friendsContainer"></div></div>
+
+<div id="chatSection">
+    <div id="messagesContainer"></div>
+    <div class="input-area">
+        <label for="imgInput" id="imgLabel" class="icon-btn"><i class="fi fi-rr-picture"></i></label>
+        <input type="file" id="imgInput" accept="image/*" multiple hidden onchange="uploadImages(this.files)">
+        
+        <span id="recTimerLabel">0:00</span>
+        <input type="text" id="messageInput" placeholder="Text here..." oninput="handleTyping()">
+        
+        <div id="actionBtnSlot"><i class="fi fi-sr-microphone icon-btn" onclick="toggleRecording()"></i></div>
+    </div>
+</div>
+
+<script>
+const firebaseConfig = {
+    apiKey: "AIzaSyDt_ayoflnFkRRnS2fXITY2EzJz0KcW5QA",
+    authDomain: "makert-bfb76.firebaseapp.com",
+    databaseURL: "https://makert-bfb76-default-rtdb.firebaseio.com",
+    projectId: "makert-bfb76",
+    storageBucket: "makert-bfb76.firebasestorage.app",
+    messagingSenderId: "245693362931",
+    appId: "1:245693362931:web:e15662a22dd50d2ac63d86"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore(), rtdb = firebase.database(), auth = firebase.auth();
+
+const IMGBB_API_KEY = "dba8c1151016eeb9f9826939c6ca5107";
+const CLOUD_NAME = "dmu7ctilf", CLOUD_PRESET = "WanderSlapp";
+
+let myID, activeFriendID, chatID, selectedMsgKey, typingTimeout, currentChatRef = null;
+let mediaRecorder, audioChunks = [], isRecording = false, recInterval, seconds = 0;
+let chatImages = []; 
+let currentImgIdx = 0;
+let currentAudio = null;
+
+auth.onAuthStateChanged(user => {
+    if(user) { 
+        myID = user.uid; 
+        rtdb.ref(`status/${myID}`).set("active");
+        rtdb.ref(`status/${myID}`).onDisconnect().set(Date.now());
+        loadFriends(); 
+    }
+});
+
+function loadFriends() {
+    db.collection("friendRequests").where("status", "==", "confirmed").onSnapshot(snap => {
+        const container = document.getElementById("friendsContainer");
+        container.innerHTML = "";
+        snap.forEach(doc => {
+            const d = doc.data();
+            if(d.from === myID || d.to === myID) {
+                const fID = (d.from === myID) ? d.to : d.from;
+                db.collection("users").doc(fID).get().then(uDoc => {
+                    const u = uDoc.data();
+                    const div = document.createElement("div");
+                    div.className = "friend-card";
+                    div.onclick = () => openChat(fID, u.fullName, u.profilePhoto);
+                    div.innerHTML = `<img src="${u.profilePhoto || 'https://i.ibb.co/7z5nDqK/avatar.png'}"><b>${u.fullName}</b><div class="u-badge" id="badge_${fID}" style="display:none">0</div>`;
+                    container.appendChild(div);
+                    listenForUnread(fID);
+                });
+            }
+        });
+    });
+}
+
+function listenForUnread(fID) {
+    rtdb.ref('chats').orderByChild('from').equalTo(fID).on('value', snap => {
+        let count = 0;
+        snap.forEach(m => { if(m.val().to === myID && !m.val().read) count++; });
+        const b = document.getElementById("badge_"+fID);
+        if(b) { b.innerText = count; b.style.display = count > 0 ? "flex" : "none"; }
+    });
+}
+
+function openChat(fID, fName, fPhoto) {
+    activeFriendID = fID;
+    chatID = myID < fID ? myID + "_" + fID : fID + "_" + myID;
+    document.getElementById("friendListSection").style.display = "none";
+    document.getElementById("chatSection").style.display = "flex";
+    document.getElementById("chatTitle").innerText = fName;
+    document.getElementById("headerPic").src = fPhoto || 'https://i.ibb.co/7z5nDqK/avatar.png';
+    document.getElementById("headerPic").style.display = "block";
+    const container = document.getElementById("messagesContainer");
+    container.innerHTML = ""; 
+    chatImages = []; 
+
+    if(currentChatRef) currentChatRef.off();
+    currentChatRef = rtdb.ref('chats').orderByChild('chatID').equalTo(chatID);
+    
+    currentChatRef.on('child_added', snap => {
+        const m = snap.val();
+        if (m.deletedBy && m.deletedBy[myID]) return;
+        if(m.type === "image" && !m.isDeletedForAll) chatImages.push(m.imageUrl);
+        renderSingleMessage(snap.key, m);
+    });
+
+    rtdb.ref(`status/${fID}`).on('value', s => {
+        const val = s.val();
+        rtdb.ref(`typing/${chatID}/${fID}`).on('value', t => {
+            const st = document.getElementById("userStatus");
+            if(t.val()) st.innerText = "typing...";
+            else st.innerText = (val === "active") ? "online" : "offline";
+        });
+    });
+}
+
+function renderSingleMessage(key, m) {
+    const container = document.getElementById("messagesContainer");
+    if (m.to === myID && !m.read) rtdb.ref(`chats/${key}`).update({read: true});
+    const div = document.createElement("div");
+    div.id = "msg_" + key;
+    div.className = `msg ${m.from === myID ? 'sent' : 'received'}`;
+    div.onclick = (e) => { 
+        if(e.target.tagName !== 'I' && !e.target.classList.contains('chat-img') && !e.target.classList.contains('voice-play')) {
+            showOptions(key, m.from);
+        }
+    };
+    div.innerHTML = m.isDeletedForAll ? `<i>🚫 Deleted</i>` : renderMsg(m, key);
+    container.appendChild(div);
+    setTimeout(() => { container.scrollTop = container.scrollHeight; }, 100);
+}
+
+function renderMsg(m, key) {
+    const isMine = (m.from === myID);
+    const tickColor = m.read ? "#34b7f1" : "#999";
+    const ticks = isMine ? `<i class="fi fi-sr-check-double" style="color:${tickColor}; font-size:11px"></i>` : "";
+    
+    if(m.type === "image") return `<img src="${m.imageUrl}" class="chat-img" onclick="openViewer('${m.imageUrl}')"><div>${ticks}</div>`;
+    
+    if(m.type === "voice") {
+        return `
+            <div style="display:flex; align-items:center; gap:10px; padding: 5px 0;">
+                <div class="voice-play" id="playBtn_${key}" onclick="playVoice('${m.audioUrl}', '${key}')">
+                    <i class="fi fi-sr-play" id="icon_${key}"></i>
+                </div>
+                <div class="v-track"><div class="v-progress" id="prog_${key}"></div></div>
+            </div>
+            <div style="text-align:right; font-size:9px">${ticks}</div>`;
+    }
+    
+    return `<span>${m.text}</span><div style="text-align:right; font-size:9px">${ticks}</div>`;
+}
+
+function playVoice(url, key) {
+    const icon = document.getElementById(`icon_${key}`);
+    const prog = document.getElementById(`prog_${key}`);
+    if (currentAudio && currentAudio.src === url) {
+        if (currentAudio.paused) { currentAudio.play(); icon.className = "fi fi-sr-pause"; }
+        else { currentAudio.pause(); icon.className = "fi fi-sr-play"; }
+        return;
+    }
+    if (currentAudio) { currentAudio.pause(); document.querySelectorAll('.voice-play i').forEach(i => i.className = "fi fi-sr-play"); }
+    currentAudio = new Audio(url);
+    currentAudio.play();
+    icon.className = "fi fi-sr-pause";
+    currentAudio.ontimeupdate = () => {
+        const percent = (currentAudio.currentTime / currentAudio.duration) * 100;
+        prog.style.width = percent + "%";
+    };
+    currentAudio.onended = () => { icon.className = "fi fi-sr-play"; prog.style.width = "0%"; };
+}
+
+function handleTyping() {
+    const txt = document.getElementById("messageInput").value.trim();
+    if(chatID) {
+        rtdb.ref(`typing/${chatID}/${myID}`).set(true);
+        clearTimeout(typingTimeout);
+        typingTimeout = setTimeout(() => rtdb.ref(`typing/${chatID}/${myID}`).set(false), 2000);
+    }
+    document.getElementById("actionBtnSlot").innerHTML = txt.length > 0 ? `<i class="fi fi-sr-paper-plane icon-btn" onclick="sendMessage()"></i>` : `<i class="fi fi-sr-microphone icon-btn" onclick="toggleRecording()"></i>`;
+}
+
+function sendMessage() {
+    const input = document.getElementById("messageInput");
+    const txt = input.value.trim();
+    if(!txt) return;
+    input.value = ""; 
+    rtdb.ref('chats').push({ chatID, from: myID, to: activeFriendID, text: txt, type: "text", timestamp: Date.now(), read: false });
+    handleTyping();
+}
+
+async function toggleRecording() {
+    const input = document.getElementById("messageInput");
+    const timerLabel = document.getElementById("recTimerLabel");
+    const imgLabel = document.getElementById("imgLabel");
+    if (!isRecording) {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream);
+        audioChunks = [];
+        mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+        mediaRecorder.onstop = async () => {
+            const blob = new Blob(audioChunks, { type: 'audio/mp3' });
+            const fd = new FormData(); fd.append("file", blob); fd.append("upload_preset", CLOUD_PRESET);
+            const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/video/upload`, {method:"POST", body:fd});
+            const data = await res.json();
+            rtdb.ref('chats').push({ chatID, from: myID, to: activeFriendID, type: "voice", audioUrl: data.secure_url, timestamp: Date.now(), read: false });
+        };
+        mediaRecorder.start();
+        isRecording = true; seconds = 0;
+        timerLabel.style.display = "block"; input.style.display = "none"; imgLabel.style.display = "none";
+        recInterval = setInterval(() => {
+            seconds++; let m = Math.floor(seconds / 60); let s = seconds % 60;
+            timerLabel.innerText = `${m}:${s < 10 ? '0' + s : s}`;
+        }, 1000);
+    } else {
+        mediaRecorder.stop(); isRecording = false; clearInterval(recInterval);
+        timerLabel.style.display = "none"; input.style.display = "block"; imgLabel.style.display = "block";
+        handleTyping();
+    }
+}
+
+async function uploadImages(files) {
+    for (let f of files) {
+        const fd = new FormData(); fd.append("image", f);
+        const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {method:"POST", body:fd});
+        const data = await res.json();
+        rtdb.ref('chats').push({ chatID, from: myID, to: activeFriendID, type: "image", imageUrl: data.data.url, timestamp: Date.now(), read: false });
+    }
+}
+
+/* VIEWER FUNCTIONS */
+function openViewer(url) { 
+    currentImgIdx = chatImages.indexOf(url); 
+    document.getElementById("viewerImg").src = url; 
+    document.getElementById("viewerOverlay").style.display = "flex"; 
+}
+function closeViewer() { document.getElementById("viewerOverlay").style.display = "none"; }
+function navImg(dir) { 
+    currentImgIdx += dir; 
+    if(currentImgIdx < 0) currentImgIdx = chatImages.length-1; 
+    if(currentImgIdx >= chatImages.length) currentImgIdx = 0; 
+    document.getElementById("viewerImg").src = chatImages[currentImgIdx]; 
+}
+
+function showOptions(k, f) { selectedMsgKey = k; document.getElementById("overlay").style.display = "block"; document.getElementById("msgOptions").style.display = "flex"; document.getElementById("delAllBtn").style.display = (f === myID) ? "block" : "none"; }
+function closePop() { document.getElementById("overlay").style.display="none"; document.getElementById("msgOptions").style.display="none"; }
+function deleteMessage(type) { if (type === 'me') rtdb.ref(`chats/${selectedMsgKey}/deletedBy/${myID}`).set(true); else rtdb.ref(`chats/${selectedMsgKey}`).update({ isDeletedForAll: true }); closePop(); }
+
+function goBack() {
+    const chat = document.getElementById("chatSection");
+    if(chat.style.display === "flex") {
+        chat.style.display = "none";
+        document.getElementById("friendListSection").style.display = "block";
+        document.getElementById("headerPic").style.display = "none";
+        document.getElementById("chatTitle").innerText = "Mauthenga";
+        if(currentChatRef) currentChatRef.off();
+    } else { window.location.href = "dashboard.html"; }
+}
+function goToProfile() { if(activeFriendID) window.location.href = `profile.html?id=${activeFriendID}`; }
+</script>
+<script src="app-engine.js"></script> 
+</body>
+</html>

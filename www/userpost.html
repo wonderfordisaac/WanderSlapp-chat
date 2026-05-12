@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="ny">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WanderSlapp Full Feed</title>
+    <script src="appEngine.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
+    <link rel='stylesheet' href='https://cdn-uicons.flaticon.com/uicons-solid-rounded/css/uicons-solid-rounded.css'>
+    <link rel='stylesheet' href='https://cdn-uicons.flaticon.com/uicons-regular-rounded/css/uicons-regular-rounded.css'>
+    
+    <style>
+        body { font-family: system-ui; background: #fff; margin: 0; padding-bottom: 20px; color: #1c1e21; overflow-x: hidden; }
+        
+        #backNav { 
+            display: none; 
+            position: sticky; top: 0; background: #fff; 
+            padding: 12px 15px; border-bottom: 1px solid #eee; 
+            z-index: 2000; align-items: center; gap: 10px;
+            font-weight: bold; color: #0a2b4f; cursor: pointer;
+        }
+
+        .feed-container { max-width: 550px; margin: auto; padding: 0; }
+        
+        .post-card { 
+            background: white; 
+            padding: 15px; 
+            border-bottom: 8px solid #f0f2f5; 
+            scroll-margin-top: 80px; 
+        }
+
+        /* Profile Clickable Area */
+        .user-info-trigger { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+
+        .post-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+        .post-header img { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; }
+        .post-header .meta { display: flex; flex-direction: column; }
+        .post-header b { font-size: 15px; color: #0a2b4f; }
+        .post-header small { font-size: 11px; color: #65676b; }
+        .post-content { font-size: 15px; margin-bottom: 8px; line-height: 1.5; white-space: pre-wrap; word-wrap: break-word; overflow: hidden; position: relative; }
+        
+        .post-content a { color: #0064e0; text-decoration: none; font-weight: 600; }
+        .post-content a:hover { text-decoration: underline; }
+
+        .clamp-text { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
+        .see-btn { color: #0a2b4f; font-weight: bold; cursor: pointer; display: none; margin-bottom: 10px; font-size: 14px; }
+        .post-media { position: relative; border-radius: 10px; overflow: hidden; background: #000; max-height: 380px; cursor: pointer; display: flex; align-items: center; justify-content: center; margin-top: 5px; }
+        .post-media img, .post-media video { width: 100%; height: auto; display: block; object-fit: cover; }
+        .play-overlay { position: absolute; font-size: 55px; color: rgba(255, 255, 255, 0.8); z-index: 5; pointer-events: none; }
+        .post-actions { display: flex; justify-content: space-between; border-top: 1px solid #eee; padding-top: 12px; margin-top: 10px; }
+        .action-btn { cursor: pointer; color: #65676b; display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 16px; background: none; border: none; padding: 5px; }
+        .action-btn i { font-size: 24px; }
+        .liked i { color: #0a2b4f; }
+
+        /* Load More Button */
+        #loadMoreBtn {
+            display: none; width: 90%; margin: 20px auto; padding: 12px;
+            background: #f0f2f5; border: none; border-radius: 8px;
+            color: #0a2b4f; font-weight: bold; cursor: pointer;
+        }
+
+        .media-badge {
+            position: absolute; bottom: 15px; right: 15px; 
+            background: rgba(0,0,0,0.7); color: #fff; 
+            padding: 5px 10px; border-radius: 8px; 
+            font-size: 14px; font-weight: bold; z-index: 10;
+        }
+
+        .shimmer { 
+            background: #e6e6e6; 
+            background-image: linear-gradient(to right, #e6e6e6 0%, #ffffff 50%, #e6e6e6 100%); 
+            background-repeat: no-repeat; 
+            background-size: 800px 100%; 
+            animation: placeholderShimmer 1s linear infinite; 
+        }
+        @keyframes placeholderShimmer { 0%{background-position: -468px 0} 100%{background-position: 468px 0} }
+        .sk-post { padding: 15px; border-bottom: 8px solid #f0f2f5; }
+        .sk-circle { width: 45px; height: 45px; border-radius: 50%; }
+        .sk-rect { height: 12px; border-radius: 4px; background: #eee; margin-bottom: 8px; }
+    </style>
+</head>
+<body>
+
+<div id="backNav" onclick="window.location.href='seach.html'">
+    <i class="fi fi-sr-arrow-left"></i> Back
+</div>
+
+<div class="feed-container">
+    <div id="skeletonLoader">
+        <div class="sk-post">
+            <div style="display:flex; gap:10px; align-items:center; margin-bottom:15px;">
+                <div class="sk-circle shimmer"></div>
+                <div style="flex:1"><div class="sk-rect shimmer" style="width:40%"></div><div class="sk-rect shimmer" style="width:20%"></div></div>
+            </div>
+            <div class="sk-rect shimmer" style="width:100%; height:80px;"></div>
+        </div>
+    </div>
+
+    <div id="postsFeed"></div>
+    <button id="loadMoreBtn" onclick="loadMore()">See more post's</button>
+</div>
+
+<script src="monitaize.js"></script>
+<script>
+const firebaseConfig = {
+    apiKey: "AIzaSyDt_ayoflnFkRRnS2fXITY2EzJz0KcW5QA",
+    authDomain: "makert-bfb76.firebaseapp.com",
+    databaseURL: "https://makert-bfb76-default-rtdb.firebaseio.com",
+    projectId: "makert-bfb76",
+    storageBucket: "makert-bfb76.firebasestorage.app",
+    messagingSenderId: "245693362931",
+    appId: "1:245693362931:web:e15662a22dd50d2ac63d86"
+};
+firebase.initializeApp(firebaseConfig);
+const rtdb = firebase.database();
+const db = firebase.firestore();
+const auth = firebase.auth();
+
+let myID;
+let lastTimestamp = null;
+let postLimit = 6; 
+
+auth.onAuthStateChanged(user => {
+    if(user) {
+        myID = user.uid;
+        checkReferrer();
+        loadPosts();
+    }
+});
+
+function checkReferrer() {
+    const nav = document.getElementById("backNav");
+    if (document.referrer.includes("search.html") || window.self === window.top) {
+        nav.style.display = "flex";
+    }
+}
+
+// 1. NTCHITO YOSEGULA PROFILE PAWOKHA (OUTSIDE IFRAME)
+function goToProfile(uid) {
+    window.top.location.href = `profile.html?uid=${uid}`;
+}
+
+// 2. LOAD POSTS WITH LIMIT (6)
+function loadPosts() {
+    // Tikutenga ma post 6 okha poyamba
+    rtdb.ref("posts").orderByChild("createdAt").limitToLast(postLimit).on('value', snap => {
+        const sk = document.getElementById("skeletonLoader");
+        if(sk) sk.style.display = "none";
+
+        const feed = document.getElementById("postsFeed");
+        feed.innerHTML = ""; 
+        
+        let posts = [];
+        snap.forEach(child => { 
+            posts.push({id: child.key, ...child.val()}); 
+        });
+
+        // Kupanga Reverse kuti atsopano ayambe pamwamba
+        posts.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
+        posts.forEach(p => { renderPost(p); });
+        
+        document.getElementById("loadMoreBtn").style.display = "block";
+        updateHeight();
+    });
+}
+
+function loadMore() {
+    postLimit += 6; // Onjezerani ena 6
+    loadPosts();
+}
+
+function renderPost(p) {
+    const feed = document.getElementById("postsFeed");
+    const card = document.createElement("div");
+    card.className = "post-card";
+    card.id = `card_${p.id}`;
+    
+    // Onjezani goToProfile pa chithunzi ndi pa dzina
+    card.innerHTML = `
+        <div class="post-header">
+            <div class="user-info-trigger" onclick="goToProfile('${p.uid}')">
+                <img src="https://i.ibb.co/7z5nDqK/avatar.png" id="img_${p.id}">
+                <div class="meta">
+                    <b id="name_${p.id}">Loading...</b>
+                    <small>${timeAgo(p.createdAt)}</small>
+                </div>
+            </div>
+        </div>
+        ${p.text ? `<div class="post-content clamp-text" id="txt_${p.id}">${linkify(p.text)}</div><span class="see-btn" id="btn_${p.id}" onclick="toggleText('txt_${p.id}','btn_${p.id}',3)">See more</span>` : ''}
+        <div id="media_${p.id}"></div>
+        <div class="post-actions">
+            <button class="action-btn" id="l_${p.id}" onclick="toggleLike('${p.id}','${p.uid}')"><i class="fi fi-sr-thumbs-up"></i> <span id="lc_${p.id}"></span></button>
+            <button class="action-btn" onclick="openComments('${p.id}','${p.uid}')"><i class="fi fi-sr-comment-alt"></i> <span id="cc_${p.id}"></span></button>
+            <button class="action-btn" onclick="openShare('${p.id}')"><i class="fi fi-rr-share"></i> <span id="sc_${p.id}"></span></button>
+        </div>`;
+    
+    feed.appendChild(card);
+
+    // Fetch User Data
+    db.collection("users").doc(p.uid).get().then(uDoc => {
+        const uData = uDoc.data() || {};
+        const nameEl = document.getElementById(`name_${p.id}`);
+        const imgEl = document.getElementById(`img_${p.id}`);
+        if(nameEl) nameEl.innerText = uData.fullName || "User";
+        if(imgEl) imgEl.src = uData.profilePhoto || 'https://i.ibb.co/7z5nDqK/avatar.png';
+        
+        if(p.media && document.getElementById(`media_${p.id}`)) {
+            renderMedia(p.id, p.media);
+        }
+        syncStats(p.id);
+        setTimeout(() => {
+            checkOverflow(`txt_${p.id}`, `btn_${p.id}`);
+            updateHeight();
+        }, 500);
+    });
+}
+
+function renderMedia(pid, media) {
+    const m = media[0];
+    const totalMedia = media.length;
+    let badgeHtml = totalMedia > 1 ? `<div class="media-badge">+${totalMedia - 1}</div>` : '';
+
+    let mHtml = m.type === "video" 
+        ? `<div class="post-media" onclick='openGallery(${JSON.stringify(media)})'>
+            <video src="${m.url}#t=2.0"></video>
+            <div class="play-overlay"><i class="fi fi-sr-play"></i></div>
+            ${badgeHtml}
+           </div>`
+        : `<div class="post-media" onclick='openGallery(${JSON.stringify(media)})'>
+            <img src="${m.url}">
+            ${badgeHtml}
+           </div>`;
+    document.getElementById(`media_${pid}`).innerHTML = mHtml;
+}
+
+function timeAgo(ts) {
+    if(!ts) return "now";
+    const s = Math.floor((new Date() - new Date(ts)) / 1000);
+    if (s < 60) return "now";
+    if (s < 3600) return Math.floor(s/60) + "m";
+    if (s < 86400) return Math.floor(s/3600) + "h";
+    return Math.floor(s/86400) + "d";
+}
+
+
+function linkify(text) {
+    if(!text) return "";
+    let t = text.replace(/(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig, '<a href="$1" target="_blank">$1</a>');
+    t = t.replace(/@([^,.!?;:\n\r]+)/g, (match, name) => {
+        let trimmedName = name.trim();
+        return `<a href="seach.html?q=${encodeURIComponent(trimmedName)}" target="_top">@${trimmedName}</a>`;
+    });
+    t = t.replace(/#(\w+)/g, (match, tag) => {
+        return `<a href="seach.html?q=%23${tag}" target="_top">#${tag}</a>`;
+    });
+    return t;
+}
+
+
+function updateHeight() {
+    const height = document.documentElement.scrollHeight;
+    window.parent.postMessage({ type: 'SET_HEIGHT', height: height }, '*');
+}
+
+function syncStats(pid) {
+    rtdb.ref(`postStats/${pid}/likes`).on('value', s => { 
+        if(document.getElementById(`lc_${pid}`)) document.getElementById(`lc_${pid}`).innerText = s.numChildren(); 
+        if(document.getElementById(`l_${pid}`)) document.getElementById(`l_${pid}`).classList.toggle("liked", s.hasChild(myID)); 
+    });
+    rtdb.ref(`postStats/${pid}/comments`).on('value', s => { if(document.getElementById(`cc_${pid}`)) document.getElementById(`cc_${pid}`).innerText = s.numChildren(); });
+    rtdb.ref(`postStats/${pid}/shares`).on('value', s => { if(document.getElementById(`sc_${pid}`)) document.getElementById(`sc_${pid}`).innerText = s.numChildren(); });
+}
+
+function openComments(pid, ownerID) { window.parent.postMessage({ type: 'OPEN_COMMENTS', pid: pid, ownerID: ownerID }, '*'); }
+function openShare(pid) { window.parent.postMessage({ type: 'OPEN_SHARE', pid: pid }, '*'); }
+function toggleLike(pid, ownerID) {
+    const ref = rtdb.ref(`postStats/${pid}/likes/${myID}`);
+    ref.once('value', s => { if(s.exists()) ref.remove(); else ref.set(true); });
+}
+
+function openGallery(media) {
+    let allContent = media.map(m => {
+        return m.type === "image" 
+            ? `<img src="${m.url}" style="width:100%; margin-bottom:15px; display:block;">` 
+            : `<video controls autoplay src="${m.url}" style="width:100%; margin-bottom:15px; display:block;"></video>`;
+    }).join('');
+
+    window.parent.postMessage({ 
+        type: "FULL_SCREEN", 
+        content: `<div style="overflow-y:auto; height:100vh; padding:50px 0; background:#000;">${allContent}</div>` 
+    }, "*");
+}
+
+function checkOverflow(tid, bid) {
+    const el = document.getElementById(tid);
+    if(el && el.scrollHeight > el.offsetHeight) {
+        const btn = document.getElementById(bid);
+        if(btn) btn.style.display = 'block';
+    }
+}
+function toggleText(tid, bid) {
+    const el = document.getElementById(tid);
+    el.classList.toggle('clamp-text');
+    document.getElementById(bid).innerText = el.classList.contains('clamp-text') ? "See more" : "See less";
+    updateHeight(); 
+}
+
+window.addEventListener('load', updateHeight);
+window.addEventListener('resize', updateHeight);
+</script>
+ <script src="user-ads.js"></script> 
+ <script src="userPost-market.js"></script>
+</body>
+</html>

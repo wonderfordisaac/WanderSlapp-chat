@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ny">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Details - WanderSlapp</title>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
+    <link rel='stylesheet' href='https://cdn-uicons.flaticon.com/uicons-solid-rounded/css/uicons-solid-rounded.css'>
+
+    <style>
+        :root { --main: #0a2b4f; --bg: #f0f2f5; --white: #ffffff; }
+        body { font-family: system-ui, sans-serif; background: var(--bg); margin: 0; padding: 20px; display: flex; justify-content: center; }
+        
+        .details-container { 
+            background: var(--white); 
+            width: 100%; 
+            max-width: 450px; 
+            padding: 25px; 
+            border-radius: 15px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
+        }
+
+        .back-btn { display: inline-block; margin-bottom: 15px; text-decoration: none; color: var(--main); font-weight: bold; }
+        h2 { text-align: center; color: var(--main); margin-bottom: 20px; margin-top: 0; }
+
+        .section-title { 
+            font-size: 14px; 
+            font-weight: bold; 
+            color: #555; 
+            margin-top: 20px; 
+            margin-bottom: 10px; 
+            border-bottom: 1px solid #eee; 
+            padding-bottom: 5px; 
+            text-transform: uppercase;
+        }
+
+        .data-text { 
+            padding: 10px 12px; 
+            font-size: 15px; 
+            color: #333; 
+            background: #fdfdfd;
+            border: 1px solid #f0f2f5;
+            border-radius: 8px;
+            min-height: 20px;
+        }
+
+        /* Kapangidwe ka Family List */
+        .family-member-item {
+            padding: 5px 0;
+            border-bottom: 1px dashed #eee;
+        }
+        .family-member-item:last-child { border-bottom: none; }
+
+        .profile-img-center { text-align: center; margin-bottom: 20px; }
+        .profile-img-center img { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 2px solid var(--main); }
+    </style>
+</head>
+<body>
+
+<div class="details-container">
+    <a href="javascript:history.back()" class="back-btn"><i class="fi fi-sr-arrow-left"></i> Back</a>
+    <h2>User Details</h2>
+
+    <div class="profile-img-center">
+        <img id="uImg" src="https://i.ibb.co/7z5nDqK/avatar.png">
+        <div style="font-weight: bold; margin-top: 10px; color: #0a2b4f;" id="uFullName">...</div>
+    </div>
+
+    <div class="section-title">Basic Information</div>
+    <div class="data-text">Country: <span id="uCountry"></span></div>
+    <div style="margin-top: 10px;" class="data-text">Phone: <span id="uPhone"></span></div>
+
+    <div class="section-title">Family (Optional)</div>
+    <div id="uFamilyList" class="data-text">---</div>
+
+    <div class="section-title">Relationship Status</div>
+    <div class="data-text">Status: <span id="uRel"></span></div>
+    <div style="margin-top: 10px;" class="data-text">Partner: <span id="uPartner"></span></div>
+
+    <div class="section-title">Education</div>
+    <div class="data-text" id="uEducation">---</div>
+
+    <div class="section-title">What they do?</div>
+    <div class="data-text" id="uOccupation">---</div>
+
+    <div style="font-size: 11px; color: #aaa; text-align: center; margin-top: 30px;">
+        Registered on: <span id="uRegDate">---</span>
+    </div>
+</div>
+
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyDt_ayoflnFkRRnS2fXITY2EzJz0KcW5QA",
+        authDomain: "makert-bfb76.firebaseapp.com",
+        databaseURL: "https://makert-bfb76-default-rtdb.firebaseio.com",
+        projectId: "makert-bfb76",
+        storageBucket: "makert-bfb76.firebasestorage.app",
+        messagingSenderId: "245693362931",
+        appId: "1:245693362931:web:e15662a22dd50d2ac63d86"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const uid = urlParams.get('uid');
+
+    if (uid) {
+        db.collection("users").doc(uid).get().then(doc => {
+            if (doc.exists) {
+                const d = doc.data();
+                
+                // Photo and Name
+                document.getElementById('uImg').src = d.profilePhoto || "https://i.ibb.co/7z5nDqK/avatar.png";
+                document.getElementById('uFullName').innerText = d.fullName || "";
+
+                // Basic Info
+                document.getElementById('uCountry').innerText = d.country || "";
+                document.getElementById('uPhone').innerText = d.phone || "";
+
+                // Family - Ma members onse azioneka pano
+                const familyContainer = document.getElementById('uFamilyList');
+                if (d.familyMembers && Array.isArray(d.familyMembers) && d.familyMembers.length > 0) {
+                    familyContainer.innerHTML = d.familyMembers.map(member => {
+                        const parts = member.split('_');
+                        return `<div class="family-member-item"><b>${parts[0]}:</b> ${parts[1]}</div>`;
+                    }).join('');
+                } else if (d.familyRole && d.familyName) {
+                    // Ngati pali m'bale mmodzi chabe (kwa akale)
+                    familyContainer.innerHTML = `<b>${d.familyRole}:</b> ${d.familyName}`;
+                } else {
+                    familyContainer.innerText = "---";
+                }
+
+                // Relationship
+                document.getElementById('uRel').innerText = d.relationship || "";
+                document.getElementById('uPartner').innerText = d.partnerName || "";
+
+                // Education and Occupation
+                document.getElementById('uEducation').innerText = d.education || "";
+                document.getElementById('uOccupation').innerText = d.occupation || "";
+
+                // Reg Date
+                if (d.createdAt) {
+                    const dt = d.createdAt.toDate();
+                    document.getElementById('uRegDate').innerText = dt.toLocaleDateString();
+                }
+
+            } else {
+                alert("User not found!");
+            }
+        });
+    }
+</script>
+<script src="app-engine.js"></script> 
+</body>
+</html>

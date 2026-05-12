@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="ny">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Group - WanderSlapp</title>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
+
+    <style>
+        :root { --main: #0a2b4f; --green: #28a745; --bg: #f0f2f5; }
+        body { font-family: system-ui; background: var(--bg); margin: 0; padding: 15px; }
+        header { background: var(--main); color: white; padding: 15px; display: flex; align-items: center; gap: 15px; border-radius: 8px; margin-bottom: 20px; }
+        
+        .admin-menu { display: flex; flex-direction: column; gap: 15px; }
+        .menu-btn { background: white; padding: 20px; border-radius: 12px; border: none; font-size: 16px; font-weight: bold; color: var(--main); display: flex; align-items: center; gap: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); cursor: pointer; }
+
+        .section { display: none; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 14px; }
+        input[type="text"] { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+        
+        .cat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 5px; }
+        .save-btn { background: var(--main); color: white; border: none; width: 100%; padding: 15px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 20px; }
+        
+        .friend-card { display: flex; align-items: center; gap: 12px; padding: 10px; border-bottom: 1px solid #eee; }
+        .friend-card img { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; }
+        .add-btn { background: var(--green); color: white; border: none; padding: 8px 15px; border-radius: 20px; font-weight: bold; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<header>
+    <span onclick="goBack()" style="cursor:pointer; font-size: 20px;">←</span>
+    <b id="headerTitle">Manage Group</b>
+</header>
+
+<div id="mainMenu" class="admin-menu">
+    <button class="menu-btn" onclick="showSection('editSection')">📝 1. EDITE GROUP</button>
+    <button class="menu-btn" onclick="showSection('addMemberSection')">👤 2. ADD MEMBER</button>
+</div>
+
+<div id="editSection" class="section">
+    <div style="text-align:center; margin-bottom:15px;">
+        <img id="currentCover" src="" style="width:120px; height:120px; border-radius:15px; object-fit:cover; background:#ddd; border: 2px solid var(--main);">
+        <input type="file" id="newCover" accept="image/*" style="display:none;" onchange="previewImg(this)">
+        <br>
+        <button onclick="document.getElementById('newCover').click()" style="margin-top:5px; color:blue; border:none; background:none; cursor:pointer;">Sinthani Chithunzi</button>
+    </div>
+
+    <div class="form-group">
+        <label>Dzina la Group</label>
+        <input type="text" id="editGName" placeholder="Dzina la group...">
+    </div>
+
+    <div class="form-group">
+        <label>Categories (Sankhani):</label>
+        <div class="cat-grid">
+            <label><input type="checkbox" class="editCat" value="Education"> Education</label>
+            <label><input type="checkbox" class="editCat" value="Chating"> Chating</label>
+            <label><input type="checkbox" class="editCat" value="Business"> Business</label>
+            <label><input type="checkbox" id="editOtherCheck" onchange="toggleOtherEdit()"> Others</label>
+        </div>
+        <input type="text" id="editOtherInput" placeholder="Specify..." style="display:none; margin-top:10px;">
+    </div>
+
+    <button class="save-btn" id="saveInfoBtn" onclick="saveGroupInfo()">SAVE CHANGES</button>
+</div>
+
+<div id="addMemberSection" class="section">
+    <div id="friendsList">Kufufuza anzanu...</div>
+</div>
+
+<script>
+const firebaseConfig = {
+    apiKey: "AIzaSyDt_ayoflnFkRRnS2fXITY2EzJz0KcW5QA",
+    authDomain: "makert-bfb76.firebaseapp.com",
+    databaseURL: "https://makert-bfb76-default-rtdb.firebaseio.com",
+    projectId: "makert-bfb76",
+    storageBucket: "makert-bfb76.firebasestorage.app",
+    messagingSenderId: "245693362931",
+    appId: "1:245693362931:web:e15662a22dd50d2ac63d86"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore(), rtdb = firebase.database(), auth = firebase.auth();
+
+const urlParams = new URLSearchParams(window.location.search);
+const gid = urlParams.get('id'); 
+let myID, groupData;
+
+auth.onAuthStateChanged(user => {
+    if(user && gid) {
+        myID = user.uid;
+        loadGroupData();
+    } else {
+        location.href = 'group.html';
+    }
+});
+
+async function loadGroupData() {
+    const doc = await db.collection("groups").doc(gid).get();
+    groupData = doc.data();
+    
+    // Ikani data yomwe inalipo m'ma bokosi
+    document.getElementById('editGName').value = groupData.name;
+    document.getElementById('currentCover').src = groupData.coverUrl;
+    
+    // Konzani ma Category checkboxes
+    if(groupData.categories) {
+        let cats = groupData.categories.split(", ");
+        let predefined = ["Education", "Chating", "Business"];
+        let others = [];
+
+        document.querySelectorAll('.editCat').forEach(cb => {
+            if(cats.includes(cb.value)) cb.checked = true;
+        });
+
+        // Check if there are "Other" categories
+        cats.forEach(c => {
+            if(!predefined.includes(c)) others.push(c);
+        });
+
+        if(others.length > 0) {
+            document.getElementById('editOtherCheck').checked = true;
+            document.getElementById('editOtherInput').style.display = 'block';
+            document.getElementById('editOtherInput').value = others.join(", ");
+        }
+    }
+}
+
+function toggleOtherEdit() {
+    document.getElementById('editOtherInput').style.display = document.getElementById('editOtherCheck').checked ? 'block' : 'none';
+}
+
+function showSection(id) {
+    document.getElementById('mainMenu').style.display = 'none';
+    document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
+    document.getElementById(id).style.display = 'block';
+    if(id === 'addMemberSection') loadFriends();
+    document.getElementById('headerTitle').innerText = (id === 'editSection') ? "Edit Group Details" : "Add New Members";
+}
+
+function goBack() {
+    if(document.getElementById('mainMenu').style.display === 'none') {
+        document.getElementById('mainMenu').style.display = 'flex';
+        document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
+        document.getElementById('headerTitle').innerText = "Manage Group";
+    } else {
+        location.href = 'group.html';
+    }
+}
+
+function previewImg(input) {
+    if (input.files && input.files[0]) {
+        let reader = new FileReader();
+        reader.onload = e => document.getElementById('currentCover').src = e.target.result;
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+async function saveGroupInfo() {
+    const name = document.getElementById('editGName').value;
+    const file = document.getElementById('newCover').files[0];
+    const btn = document.getElementById('saveInfoBtn');
+    
+    // Pezani ma categories osankhidwa
+    let selectedCats = Array.from(document.querySelectorAll('.editCat:checked')).map(cb => cb.value);
+    if(document.getElementById('editOtherCheck').checked) {
+        selectedCats.push(document.getElementById('editOtherInput').value);
+    }
+
+    btn.disabled = true; btn.innerText = "Saving...";
+    
+    try {
+        let updateObj = { name: name, categories: selectedCats.join(", ") };
+        
+        if(file) {
+            let formData = new FormData(); formData.append("image", file);
+            let res = await fetch("https://api.imgbb.com/1/upload?key=6cd76cd441b1c0779a48c166439c8ffe", { method: "POST", body: formData });
+            let data = await res.json();
+            updateObj.coverUrl = data.data.url;
+        }
+        
+        await db.collection("groups").doc(gid).update(updateObj);
+        alert("Zasintha!");
+        location.reload();
+    } catch(e) { alert("Vuto lachitika!"); btn.disabled = false; btn.innerText = "SAVE CHANGES"; }
+}
+
+async function loadFriends() {
+    const friendsDiv = document.getElementById('friendsList');
+    friendsDiv.innerHTML = "Tikufufuza...";
+    
+    const snap = await db.collection("friendRequests").where("status", "==", "confirmed").get();
+    let friendIDs = [];
+    snap.forEach(doc => {
+        let d = doc.data();
+        let fID = (d.from === myID) ? d.to : d.from;
+        friendIDs.push(fID);
+    });
+
+    friendsDiv.innerHTML = "";
+    for(let fuid of friendIDs) {
+        if(!groupData.members.includes(fuid)) {
+            const uDoc = await db.collection("users").doc(fuid).get();
+            const u = uDoc.data();
+            friendsDiv.innerHTML += `
+                <div class="friend-card" id="row-${fuid}">
+                    <img src="${u.profilePhoto || 'https://i.ibb.co/7z5nDqK/avatar.png'}">
+                    <b style="flex:1">${u.fullName}</b>
+                    <button class="add-btn" onclick="addMemberToGroup('${fuid}', '${u.fullName}')">Add</button>
+                </div>`;
+        }
+    }
+    if(friendsDiv.innerHTML === "") friendsDiv.innerHTML = "Palibe anzanu oti muwaonjezere.";
+}
+
+async function addMemberToGroup(fuid, fName) {
+    try {
+        await db.collection("groups").doc(gid).update({
+            members: firebase.firestore.FieldValue.arrayUnion(fuid),
+            memberCount: firebase.firestore.FieldValue.increment(1)
+        });
+
+        rtdb.ref('notifications').push({
+            to: fuid, from: myID,
+            message: `Mwapangidwa add mu group la: ${groupData.name}`,
+            link: `group.html?id=${gid}`,
+            read: false, timestamp: Date.now()
+        });
+
+        document.getElementById(`row-${fuid}`).style.display = 'none';
+        alert(fName + " alowa mu group!");
+    } catch(e) { alert("Vuto!"); }
+}
+</script>
+<script src="app-engine.js"></script> 
+</body>
+</html>

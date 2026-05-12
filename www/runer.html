@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="ny">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Runner Champion</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #87CEEB; font-family: 'Arial', sans-serif; touch-action: manipulation; }
+        canvas { display: block; }
+        #ui { position: absolute; top: 20px; left: 20px; font-size: 24px; color: white; text-shadow: 2px 2px 4px #000; z-index: 10; display: flex; gap: 15px; align-items: center; }
+        .controls { position: absolute; top: 20px; right: 20px; z-index: 30; display: flex; gap: 10px; }
+        .btn-small { background: rgba(0,0,0,0.6); color: white; border: 2px solid white; padding: 10px; border-radius: 5px; cursor: pointer; font-size: 14px; }
+        
+        #runnerGif { position: absolute; width: 70px; height: 70px; pointer-events: none; z-index: 5; display: none; }
+
+        .overlay { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.85); display: flex; flex-direction: column; 
+            justify-content: center; align-items: center; color: white; z-index: 100; text-align: center;
+        }
+
+        #msg, #pauseScreen { display: none; }
+        /* Chithunzi pa start screen */
+        .start-img { width: 120px; height: auto; margin-bottom: 15px; border: 3px solid white; border-radius: 10px; }
+        
+        button.main-btn { padding: 15px 40px; font-size: 22px; cursor: pointer; background: #4CAF50; color: white; border: none; border-radius: 10px; margin-top: 20px; box-shadow: 0 5px #2e6631; font-weight: bold; }
+        button.main-btn:active { box-shadow: 0 2px #2e6631; transform: translateY(3px); }
+    </style>
+</head>
+<body onmousedown="handleJump()" ontouchstart="handleJump()">
+
+    <div id="ui">
+        <div>Nthawi: <span id="timer">0</span>s / 60s</div>
+    </div>
+
+    <div class="controls">
+        <button class="btn-small" onclick="togglePause(event)" id="pauseBtn">PAUSE</button>
+        <button class="btn-small" onclick="toggleMute(event)" id="muteBtn">MUTE</button>
+    </div>
+
+    <div id="startScreen" class="overlay">
+        <img src="images/my runer4.gif" class="start-img" alt="Runner">
+        <h1>RUNNER CHAMPION</h1>
+        <p>Help the runner reach the Finish Line!</p>
+        <button class="main-btn" onclick="startGame()">START</button>
+    </div>
+
+    <div id="pauseScreen" class="overlay">
+        <h1>GAME PAUSED</h1>
+        <button class="main-btn" onclick="togglePause(event)">CONTINUE</button>
+    </div>
+
+    <div id="msg" class="overlay">
+        <h1 id="status">GAME OVER</h1>
+        <p id="subtext">You failed to finish!</p>
+        <button class="main-btn" onclick="resetGame()">START AGAIN</button>
+    </div>
+
+    <img id="runnerGif" src="images/my runer4.gif" alt="runner">
+
+    <audio id="bgMusic" loop preload="auto"><source src="music/goodBackgroud-music.mp3" type="audio/mpeg"></audio>
+    <audio id="jumpSound" preload="auto"><source src="music/game sound2.mp3" type="audio/mpeg"></audio>
+    <audio id="gameOverSound" preload="auto"><source src="music/lose.wav" type="audio/mpeg"></audio>
+    <audio id="winSound" preload="auto"><source src="music/win.wav" type="audio/mpeg"></audio>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        const timerTxt = document.getElementById("timer");
+        const runnerElement = document.getElementById("runnerGif");
+        
+        const bgMusic = document.getElementById("bgMusic");
+        const jumpSound = document.getElementById("jumpSound");
+        const gameOverSound = document.getElementById("gameOverSound");
+        const winSound = document.getElementById("winSound");
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        let gameActive = false;
+        let isPaused = false;
+        let isMuted = false;
+        let hasWon = false;
+        let timePassed = 0;
+        let gameSpeed = 7;
+        let frameCount = 0;
+        const targetTime = 60; 
+
+        const player = { x: 100, y: 0, w: 60, h: 60, dy: 0, jumpPower: -14, gravity: 0.7, jumpsLeft: 2, onGround: false };
+        let platforms = [{ x: 0, y: canvas.height - 100, w: 800, h: 100 }];
+
+        function startGame() {
+            document.getElementById("startScreen").style.display = "none";
+            runnerElement.style.display = "block";
+            gameActive = true;
+            if(!isMuted) bgMusic.play().catch(e => console.log("Audio play error"));
+            update();
+        }
+
+        function handleJump(e) {
+            if (e) e.preventDefault();
+            if (!gameActive || isPaused) return;
+            if (player.jumpsLeft > 0) {
+                player.dy = player.jumpPower;
+                player.jumpsLeft--;
+                player.onGround = false;
+                if(!isMuted) { jumpSound.currentTime = 0; jumpSound.play(); }
+            }
+        }
+
+        function togglePause(e) {
+            e.stopPropagation();
+            if (!gameActive && !isPaused) return;
+            isPaused = !isPaused;
+            document.getElementById("pauseScreen").style.display = isPaused ? "flex" : "none";
+            document.getElementById("pauseBtn").innerText = isPaused ? "PLAY" : "PAUSE";
+            if (isPaused) bgMusic.pause(); else if(!isMuted) bgMusic.play();
+        }
+
+        function toggleMute(e) {
+            e.stopPropagation();
+            isMuted = !isMuted;
+            bgMusic.muted = isMuted;
+            document.getElementById("muteBtn").innerText = isMuted ? "UNMUTE" : "MUTE";
+        }
+
+        function resetGame() { location.reload(); }
+
+        function update() {
+            if (!gameActive || isPaused) {
+                if(gameActive) requestAnimationFrame(update);
+                return;
+            }
+
+            frameCount++;
+            if (frameCount % 60 === 0) {
+                timePassed++;
+                timerTxt.innerText = timePassed;
+            }
+
+            player.dy += player.gravity;
+            player.y += player.dy;
+            player.onGround = false; 
+
+            for (let p of platforms) {
+                if (player.x + player.w - 15 > p.x && player.x + 15 < p.x + p.w && 
+                    player.y + player.h <= p.y + 15 && player.y + player.h + player.dy >= p.y) {
+                    player.y = p.y - player.h;
+                    player.dy = 0;
+                    player.onGround = true;
+                    player.jumpsLeft = 2;
+                }
+                p.x -= gameSpeed;
+            }
+
+            if (platforms[platforms.length - 1].x + platforms[platforms.length - 1].w < canvas.width + 300) {
+                if (timePassed < targetTime) {
+                    let gap = 150 + Math.random() * 150;
+                    let width = 250 + Math.random() * 300;
+                    platforms.push({ x: platforms[platforms.length - 1].x + platforms[platforms.length - 1].w + gap, y: canvas.height - 100, w: width, h: 100 });
+                } else {
+                    platforms.push({ x: platforms[platforms.length - 1].x + platforms[platforms.length - 1].w + 100, y: canvas.height - 100, w: 3000, h: 100, isFinish: true });
+                }
+            }
+
+            let finishLine = platforms.find(p => p.isFinish);
+            if (finishLine && player.x > finishLine.x + 200 && player.onGround && !hasWon) {
+                win();
+                return;
+            }
+
+            if (player.y > canvas.height) {
+                gameOver();
+                return;
+            }
+
+            runnerElement.style.left = player.x + "px";
+            runnerElement.style.top = player.y + "px";
+
+            draw();
+            requestAnimationFrame(update);
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (let p of platforms) {
+                // Thupi la nthaka
+                ctx.fillStyle = p.isFinish ? "#FFD700" : "#2c3e50";
+                ctx.fillRect(p.x, p.y, p.w, p.h);
+                
+                // Nthaka ya green (Grass layer)
+                ctx.fillStyle = p.isFinish ? "#FFF" : "#27ae60";
+                ctx.fillRect(p.x, p.y, p.w, 12);
+                
+                if (p.isFinish) {
+                    ctx.fillStyle = "black";
+                    ctx.font = "bold 24px Arial";
+                    ctx.fillText("FINISH LINE 🇲🇼🏁", p.x + 150, p.y + 60);
+                }
+            }
+        }
+
+        function win() {
+            hasWon = true;
+            bgMusic.pause();
+            if(!isMuted) {
+                winSound.currentTime = 0;
+                winSound.play();
+            }
+            setTimeout(() => {
+                gameActive = false;
+                document.getElementById("status").innerText = "CHAMPION! 🏆";
+                document.getElementById("status").style.color = "#FFD700";
+                document.getElementById("subtext").innerText = "we are happy with you!";
+                document.getElementById("msg").style.display = "flex";
+            }, 100);
+        }
+
+        function gameOver() {
+            if (hasWon) return;
+            gameActive = false;
+            bgMusic.pause();
+            if(!isMuted) gameOverSound.play();
+            document.getElementById("msg").style.display = "flex";
+            runnerElement.style.display = "none";
+        }
+    </script>
+</body>
+</html>

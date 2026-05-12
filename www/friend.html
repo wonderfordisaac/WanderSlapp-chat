@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="ny">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WanderSlapp - Friends</title>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
+
+    <style>
+        body { font-family: system-ui; background: #f4f7f6; margin: 0; padding: 15px; }
+        header { background: #0a142b; color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; border-radius: 8px; }
+        .btn-toggle { background: white; color: #0a142b; border: none; padding: 6px 12px; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 12px; }
+        .section-title { font-size: 14px; font-weight: bold; margin: 20px 0 10px; color: #0a2b4f; }
+        .card { background: white; padding: 10px; margin-bottom: 8px; border-radius: 10px; display: flex; align-items: center; gap: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .user-info { display: flex; align-items: center; gap: 12px; flex: 1; cursor: pointer; }
+        .card img { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; background: #ddd; border: 1px solid #eee; }
+        .card b { font-size: 14px; }
+        button { border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: bold; }
+        .btn-add { background: #0a2b4f; color: white; }
+        .btn-accept { background: #28a745; color: white; }
+        .btn-unfriend { background: #ff4d4d; color: white; }
+        #anzanuSection { display: none; background: #e9ecef; padding: 10px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #ccc; }
+        .close-btn { color: red; cursor: pointer; font-weight: bold; font-size: 14px; }
+    </style>
+</head>
+<body>
+
+<header>
+    <span onclick="location.href='dashboard.html'" style="cursor:pointer">← Back</span>
+    <b>Friends Section</b>
+    <button class="btn-toggle" onclick="toggleAnzanu()">your friends▾</button>
+</header>
+
+<div id="anzanuSection">
+    <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+        <small>your friends</small>
+        <span class="close-btn" onclick="toggleAnzanu()">X</span>
+    </div>
+    <div id="confirmedList">Load friends...</div>
+</div>
+
+<div class="section-title">Friend request</div>
+<div id="requestsList"></div>
+
+<div class="section-title">People You May Know</div>
+<div id="peopleList"></div>
+
+    
+<script src="send-notf.js"></script>
+<script>
+const firebaseConfig = {
+    apiKey: "AIzaSyDt_ayoflnFkRRnS2fXITY2EzJz0KcW5QA",
+    authDomain: "makert-bfb76.firebaseapp.com",
+    databaseURL: "https://makert-bfb76-default-rtdb.firebaseio.com",
+    projectId: "makert-bfb76",
+    storageBucket: "makert-bfb76.firebasestorage.app",
+    messagingSenderId: "245693362931",
+    appId: "1:245693362931:web:e15662a22dd50d2ac63d86"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const rtdb = firebase.database();
+const auth = firebase.auth();
+    // --- PANO NDIYE PONYANI CODE YATSOPANOYI --- //
+// --- CHATSOPANO: ENABLE OFFLINE PERSISTENCE --- //
+db.enablePersistence()
+  .catch((err) => {
+      if (err.code == 'failed-precondition') {
+          console.log("Persistence failed: Multiple tabs open");
+      } else if (err.code == 'unimplemented') {
+          console.log("Persistence not supported in this browser");
+      }
+  });
+// --- KATHERO --- //
+let myID;
+
+auth.onAuthStateChanged(user => {
+    if(user) {
+        myID = user.uid;
+        loadContent();
+    }
+});
+
+function toggleAnzanu() {
+    const sec = document.getElementById("anzanuSection");
+    sec.style.display = (sec.style.display === "block") ? "none" : "block";
+}
+
+function loadContent() {
+    db.collection("friendRequests").onSnapshot(snap => {
+        const reqDiv = document.getElementById("requestsList");
+        const confDiv = document.getElementById("confirmedList");
+        reqDiv.innerHTML = ""; confDiv.innerHTML = "";
+        
+        let involved = [myID];
+        let hasFriends = false;
+
+        snap.forEach(doc => {
+            const r = doc.data();
+            const rid = doc.id;
+            
+            if(r.to === myID && r.status === "pending") {
+                involved.push(r.from);
+                renderUser(r.from, reqDiv, `<button class="btn-accept" onclick="accept('${rid}','${r.from}')">Comfilm</button>`);
+            }
+
+            if(r.status === "confirmed" && (r.from === myID || r.to === myID)) {
+                hasFriends = true;
+                let friendID = (r.from === myID) ? r.to : r.from;
+                involved.push(friendID);
+                renderUser(friendID, confDiv, `<button class="btn-unfriend" onclick="unfriend('${rid}')">Unfriend</button>`);
+            }
+
+            if(r.from === myID && r.status === "pending") {
+                involved.push(r.to);
+            }
+        });
+
+        if(!hasFriends) confDiv.innerHTML = "<small>You don't have any friend.</small>";
+        loadSuggestions(involved);
+    });
+}
+
+function loadSuggestions(involved) {
+    db.collection("users").limit(30).get().then(snap => {
+        const pList = document.getElementById("peopleList");
+        pList.innerHTML = "";
+        snap.forEach(doc => {
+            if(!involved.includes(doc.id)) {
+                const u = doc.data();
+                pList.innerHTML += `
+                <div class="card">
+                    <div class="user-info" onclick="location.href='profile.html?id=${doc.id}'">
+                        <img src="${u.profilePhoto || 'https://i.ibb.co/7z5nDqK/avatar.png'}">
+                        <b>${u.fullName}</b>
+                    </div>
+                    <button class="btn-add" onclick="send('${doc.id}')">Add Friend</button>
+                </div>`;
+            }
+        });
+    });
+}
+
+function renderUser(uid, container, btnHTML) {
+    db.collection("users").doc(uid).get().then(doc => {
+        const u = doc.data();
+        if(u) {
+            container.innerHTML += `
+            <div class="card">
+                <div class="user-info" onclick="location.href='profile.html?id=${uid}'">
+                    <img src="${u.profilePhoto || 'https://i.ibb.co/7z5nDqK/avatar.png'}">
+                    <b>${u.fullName}</b>
+                </div>
+                ${btnHTML}
+            </div>`;
+        }
+    });
+}
+
+// ITANANI SMART NOTIFICATION PA KUTUMIZA REQUEST
+function send(to) {
+    db.collection("friendRequests").add({ 
+        from: myID, 
+        to: to, 
+        status: "pending", 
+        timestamp: Date.now() 
+    }).then(() => {
+        // Mzere wofunika uyu:
+        sendSmartNotification(to, 'friend_request', 'fr_' + myID);
+        alert("Request Send!");
+    });
+}
+
+// ITANANI SMART NOTIFICATION PA KUVOMERA (ACCEPT) REQUEST
+function accept(rid, sID) {
+    db.collection("friendRequests").doc(rid).update({ 
+        status: "confirmed" 
+    }).then(() => {
+        // Mzere wofunika uyu:
+        sendSmartNotification(sID, 'accept_request', 'ac_' + myID);
+    });
+}
+
+function unfriend(rid) {
+    if(confirm("do You wont to remove this friend?")) {
+        db.collection("friendRequests").doc(rid).delete().then(() => {
+            alert("friend removed.");
+        });
+    }
+}
+</script>
+<script src="app-engine.js"></script> 
+</body>
+</html>

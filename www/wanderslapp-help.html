@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ny">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>WanderSlapp Document</title>
+    
+    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-solid-rounded/css/uicons-solid-rounded.css">
+    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-regular-rounded/css/uicons-regular-rounded.css">
+    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-brands/css/uicons-brands.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root { --admin-main: #0a142b; --accent: #28a745; --danger: #dc3545; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f4f7f6; margin: 0; }
+        header { background: var(--admin-main); color: white; padding: 20px; text-align: center; }
+
+        .back-link { color: white; text-decoration: none; display: flex; align-items: center; }
+        
+        .container { padding: 15px; max-width: 600px; margin: auto; }
+        .user-card { background: white; padding: 15px; border-radius: 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .btn-manage { background: var(--accent); color: white; border: none; padding: 10px 15px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+
+        #postManager { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #fff; z-index: 1000; overflow-y: auto; }
+        .post-item { border-bottom: 5px solid #f0f2f5; padding: 15px; }
+        
+        /* Media Preview CSS ya Video ndi Image */
+        .media-preview-box { width: 80px; height: 80px; border-radius: 8px; overflow: hidden; background: #000; display: flex; align-items: center; justify-content: center; position: relative; }
+        .media-preview-box img, .media-preview-box video { width: 100%; height: 100%; object-fit: cover; }
+        .video-icon-overlay { position: absolute; color: white; font-size: 20px; opacity: 0.8; pointer-events: none; }
+        
+        .ad-box { margin-top: 10px; padding: 12px; border-radius: 10px; background: #f9f9f9; border: 1px dashed #ccc; }
+        .status-badge { font-size: 10px; padding: 4px 8px; border-radius: 5px; font-weight: 800; display: inline-block; margin-bottom: 5px; }
+        .active-ad { background: #d4edda; color: #155724; }
+        .no-ad { background: #f8d7da; color: #721c24; }
+
+        .upload-row { display: flex; gap: 8px; margin-top: 10px; }
+        .action-btn { flex: 1; padding: 12px; border: none; border-radius: 6px; color: white; font-weight: bold; cursor: pointer; font-size: 12px; }
+        .btn-img { background: #17a2b8; }
+        .btn-vid { background: #fd7e14; }
+        .btn-del { background: var(--danger); }
+
+         /* CONTACT BAR PANSI */
+        .contact-bar {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding-bottom: 50px;
+        }
+
+        .contact-item {
+            flex: 1;
+            text-decoration: none;
+            color: #FFFF00; /* Yellow pama link onse */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-weight: 900;
+            text-shadow: 2px 2px 5px rgba(0, 0, 0, 1);
+        }
+
+        .contact-item i { 
+            font-size: 2.5rem; 
+            margin-bottom: 8px;
+            /* Izi zipangitsa ma icon nawo kukhala ndi mthunzi wakuda */
+            filter: drop-shadow(2px 2px 4px rgba(0,0,0,1));
+        }
+
+        /* Tinasunga mitundu ya ma logo koma tawaonjezera kuwala */
+        .fa-whatsapp { color: #25D366; }
+        .fa-envelope { color: #ffffff; } /* Email ndaika yoyera kuti ifanane ndi yellow */
+        .fa-facebook { color: #1877F2; }
+
+        #loader { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 2000; color: white; flex-direction: column; align-items: center; justify-content: center; }
+        .spinner { border: 4px solid rgba(255,255,255,0.3); border-top: 4px solid #fff; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 10px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+<header>
+    <a href="document.html" class="back-link"><i class="fi fi-sr-arrow-left"></i></a>
+    <h2>WanderSlapp Document</h2>
+    <small>read this document carefully</small>
+</header>
+
+<p><h3>CHONDE TIMVETSENI PA UTHENGA UWU!</h3>
+    <br>
+
+Munthune ndili ndimatso mphenya akulu kwambiri, ndikufunitsitsa kuti nonse omwe muli pa app ino muzitha kumalandila ndalama zanu zomwe mwapeza pa app ino (monitaizetion)<br>
+<br>
+
+koma ndikufuna kupepesa chifukwa simungathe kulandila ndalamazi pakadali pano, chifukwa WANDERSLAPP sikupanga phindu lililonse ayi pakadali pano. koma ine ndikusangalala kwambiri kupezeka kwanu pa mudzi pano, mukundilimbikitsa kwambiri ndipo ndikuziwa kuti WANDERSLAPP ndithu mutsogolomu tiyamba kupanga phindu ndi app imeneyi, izi zizapangisa kuti tiyambe kupeleka ndalama za monitaizetion kwa aliyense.
+<br>
+<br>
+
+KODI CHOFUNIKA NDICHANI PAKADALI PANO?<br>
+<br>
+
+Mukawona pa application ino pali njira zambiri zolengezera malonda, ndipo amalonda atati ayambe kulengezetsa malonda awo muno, zizikhala zosavuta inu ogwiritsa ntchito app iyi kuwona malondawo.
+Koma dziwani kuti, kuti amalonda ayambe kulengezesa malonda awo muno choyamba amayang'ana  kuchuluka kwa anthu ogwiritsa ntchito app yo.<br>
+<br>
+
+Pachifukwa chimenechi ndikupempha inu nonse omwe mwalowa kale pa app yathu kuti, uzaninso anzanu kuti alowe pa app imeneyi, chifukwa tikachulukapo ndipamene tingayambe kupeza phindu lambiri ndi app imeneyi ndipo phindulo ndilomwe tizizagawana tonse pa app imeneyi.<br>
+<br>
+
+Njira zomwe mukupezera ndalama pa WANDERSLAPP  ndi njira zeni zeni zomwe taziyika kuti muzipangadi ndalama pogwiritsa ntchito app yi. Koma choyamba ndikukupemphani kuti tiyeni tonse mogwirizana tipangitse app imeneyi kukhala yapamwamba ku Malawi kuno. <br>
+<br>
+
+Mwina nokha mwawonanso kuti app iyi yapangidwa mwapamwamba, poganizila mmene kulili ku Malawi kuno.<br>
+<br>
+
+Chooonde ndithandizeni kumanga application imeneyi. pakufunika Suport yanu yayikulu.
+panopa musayang'ane kwambiri za ndalama, koma ganizirani zothandiza app iyi kupita patsogolo.<br>
+<br>
+
+CHILUNGAMO CHAKE PANOPA!<br>
+<br>
+
+WANDERSLAPP sikupereka ndalama za monitaizetion.
+Zomwe zikuchitika panopa ndizongothandiza kukopa anthu kuti abwere pa application imeneyi.
+Inunso mukulimbikisidwa kugwira nawo ntchito yokopa anthu imeneyi.<br>
+<br>
+
+Gawirani anthu, anzanu pa Facebook, Whatsapp ndimalo ena aliwonse omwe mungakwanise.<br>
+<br>
+
+Mutha kumangoponya link iyi kwa anzanu kuti apange okha Download<br>
+
+        https://free-apps-6nzk.onrender.com/<br>
+ <br>       
+
+
+Tiyeni tigwire ntchito yoyitanira anthu ambiri pa application ino,
+tonse tizapindula ndi app imeneyi.<br> 
+<br>
+
+Choyamba inuyo iphunzileni, muyiziwe bwino, muzikwanitsa kufotokozera ena zokhuza app imeneyi. kuti akopeke ndikubwera pa app imeneyi, muziwasonyeza ndalama zanu za monitaizetion, muzizipanga SCREENSHOT zochitika zosiyana siyana zamu app imeneyi ndikuma onetsa anthu pa FACEBOOK ndi malo ena aliwonse
+<br>
+<br>
+
+SUPORT, SUPORT, SUPORT  MALAWI<br>
+<br>
+
+WANDERSLAPP</p>
+
+<h2>Kodi muli ndi funso?</h2><p><mark>tipezeni pa njira zotsatirazi</p>
+
+<div class="contact-bar">
+            <a href="https://wa.me/2650990914737" class="contact-item">
+                <i class="fab fa-whatsapp"></i>
+                <span>WHATSAPP</span>
+            </a>
+            <a href="mailto:wanderslappprograms@gmail.com" class="contact-item">
+                <i class="fas fa-envelope"></i>
+                <span>EMAIL</span>
+            </a>
+            <a href="https://www.facebook.com/isaacsupersaax.wanderford.1" class="contact-item">
+                <i class="fab fa-facebook"></i>
+                <span>FACEBOOK</span>
+            </a>
+        </div>
+
+</body>
+</html>

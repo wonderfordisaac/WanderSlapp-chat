@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="ny">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edite Profile - WanderSlapp</title>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
+    <link rel='stylesheet' href='https://cdn-uicons.flaticon.com/uicons-solid-rounded/css/uicons-solid-rounded.css'>
+
+    <style>
+        :root { --main: #0a2b4f; --bg: #f0f2f5; --white: #ffffff; }
+        body { font-family: system-ui, sans-serif; background: var(--bg); margin: 0; padding: 20px; display: flex; justify-content: center; }
+        .edit-container { background: var(--white); width: 100%; max-width: 450px; padding: 25px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h2 { text-align: center; color: var(--main); margin-bottom: 20px; }
+        
+        .section-title { font-size: 14px; font-weight: bold; color: #555; margin-top: 20px; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+        
+        form { display: flex; flex-direction: column; gap: 15px; }
+        .row { display: flex; gap: 10px; }
+        .row input, .row select { flex: 1; }
+        
+        input, select, textarea { 
+            padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 14px; outline: none; transition: 0.3s; width: 100%; box-sizing: border-box;
+        }
+        input:focus, select:focus { border-color: var(--main); }
+        textarea { resize: none; height: 50px; display: none; margin-top: 5px; } 
+
+        button { 
+            background: var(--main); color: white; padding: 14px; border: none; border-radius: 8px; 
+            font-weight: bold; cursor: pointer; margin-top: 10px; font-size: 16px;
+        }
+        button:active { transform: scale(0.98); }
+
+        /* Family Section Custom Style */
+        .family-list { margin-top: 10px; display: flex; flex-direction: column; gap: 5px; }
+        .family-item { 
+            background: #eef2f7; padding: 8px 12px; border-radius: 6px; font-size: 13px;
+            display: flex; justify-content: space-between; align-items: center; border: 1px solid #ddd;
+        }
+        .family-item i { color: #ff4d4d; cursor: pointer; }
+        .add-family-btn { 
+            background: #28a745; padding: 8px; font-size: 12px; margin-top: 5px; width: auto; align-self: flex-start;
+        }
+
+        .info-box { font-size: 12px; color: #777; text-align: center; margin-top: 15px; }
+        .back-btn { display: inline-block; margin-bottom: 15px; text-decoration: none; color: var(--main); font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="edit-container">
+    <a href="dashboard.html" class="back-btn"><i class="fi fi-sr-arrow-left"></i> Back</a>
+    <h2>Edite Profile</h2>
+
+    <form id="editProfileForm">
+        <div class="section-title">Basic Information</div>
+        <div class="row">
+            <input type="text" id="fName" placeholder="First Name">
+            <input type="text" id="lName" placeholder="Last Name">
+        </div>
+        <input type="email" id="email" placeholder="Email" disabled>
+        
+        <div class="row">
+            <input type="text" id="phone" placeholder="Phone Number">
+            <select id="country" onchange="toggleCountryInput()">
+                <option value="Malawi">Malawi</option>
+                <option value="Zambia">Zambia</option>
+                <option value="Tanzania">Tanzania</option>
+                <option value="Others">Others</option>
+            </select>
+        </div>
+        <textarea id="otherCountry" placeholder="Lembani dzina la dziko lanu..."></textarea>
+
+        <div class="section-title">Family (Optional)</div>
+        <select id="familyRole" onchange="toggleFamilyInput()">
+            <option value="">Add Family Member...</option>
+            <option value="Mother">Mother</option>
+            <option value="Father">Father</option>
+            <option value="Sister">Sister</option>
+            <option value="Brother">Brother</option>
+            <option value="Uncle">Uncle</option>
+            <option value="Grand Mother">Grand Mother</option>
+            <option value="Grand Father">Grand Father</option>
+        </select>
+        <textarea id="familyName" placeholder="Lembani dzina la m'bale wanuyo..."></textarea>
+        <button type="button" class="add-family-btn" id="addMemberBtn" style="display: none;" onclick="addFamilyMember()">ADD MEMBER</button>
+        
+        <div id="familyDisplayList" class="family-list"></div>
+
+        <div class="section-title">Relationship Status</div>
+        <select id="relationship" onchange="toggleRelInput()">
+            <option value="Single">Single</option>
+            <option value="In relationship with Someone">In a relationship with someone</option>
+            <option value="In a relationship with">In a relationship with...</option>
+        </select>
+        <textarea id="partnerName" placeholder="Lembani dzina la okondedwa wanu pano..."></textarea>
+
+        <div class="section-title">Education</div>
+        <select id="education">
+            <option value="None">Select Education...</option>
+            <option value="Primary">Primary</option>
+            <option value="Secondary">Secondary</option>
+            <option value="College">College</option>
+            <option value="University">University</option>
+        </select>
+
+        <div class="section-title">What you do?</div>
+        <select id="occupation">
+            <option value="None">Select Occupation...</option>
+            <option value="Working">Working</option>
+            <option value="Business">Business</option>
+            <option value="School">School</option>
+            <option value="Nothing">Nothing</option>
+        </select>
+
+        <button type="submit" id="saveBtn">SAVE CHANGES</button>
+    </form>
+
+    <div class="info-box">
+        Registered on: <span id="regDate">Loading...</span>
+    </div>
+</div>
+
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyDt_ayoflnFkRRnS2fXITY2EzJz0KcW5QA",
+        authDomain: "makert-bfb76.firebaseapp.com",
+        databaseURL: "https://makert-bfb76-default-rtdb.firebaseio.com",
+        projectId: "makert-bfb76",
+        storageBucket: "makert-bfb76.firebasestorage.app",
+        messagingSenderId: "245693362931",
+        appId: "1:245693362931:web:e15662a22dd50d2ac63d86"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    let familyMembers = []; // Array to store multiple members
+
+    function toggleCountryInput() {
+        const c = document.getElementById('country').value;
+        document.getElementById('otherCountry').style.display = (c === "Others") ? "block" : "none";
+    }
+
+    function toggleFamilyInput() {
+        const role = document.getElementById('familyRole').value;
+        const isVisible = role !== "";
+        document.getElementById('familyName').style.display = isVisible ? "block" : "none";
+        document.getElementById('addMemberBtn').style.display = isVisible ? "block" : "none";
+    }
+
+    function addFamilyMember() {
+        const role = document.getElementById('familyRole').value;
+        const name = document.getElementById('familyName').value.trim();
+
+        if (role && name) {
+            const memberString = `${role}_${name}`;
+            if (!familyMembers.includes(memberString)) {
+                familyMembers.push(memberString);
+                renderFamilyList();
+            }
+            // Reset inputs
+            document.getElementById('familyRole').value = "";
+            document.getElementById('familyName').value = "";
+            toggleFamilyInput();
+        }
+    }
+
+    function removeFamilyMember(index) {
+        familyMembers.splice(index, 1);
+        renderFamilyList();
+    }
+
+    function renderFamilyList() {
+        const listDiv = document.getElementById('familyDisplayList');
+        listDiv.innerHTML = "";
+        familyMembers.forEach((m, index) => {
+            const display = m.replace("_", ": ");
+            listDiv.innerHTML += `
+                <div class="family-item">
+                    <span>${display}</span>
+                    <i class="fi fi-sr-trash" onclick="removeFamilyMember(${index})"></i>
+                </div>
+            `;
+        });
+    }
+
+    function toggleRelInput() {
+        const rel = document.getElementById('relationship').value;
+        document.getElementById('partnerName').style.display = (rel === "In a relationship with") ? "block" : "none";
+    }
+
+    auth.onAuthStateChanged(user => {
+        if (user) {
+            db.collection("users").doc(user.uid).get().then(doc => {
+                if (doc.exists) {
+                    const d = doc.data();
+                    const nameParts = d.fullName ? d.fullName.split(" ") : ["", ""];
+                    
+                    document.getElementById('fName').value = nameParts[0] || "";
+                    document.getElementById('lName').value = nameParts[1] || "";
+                    document.getElementById('email').value = d.email || "";
+                    document.getElementById('phone').value = d.phone || "";
+                    
+                    if(d.country) {
+                        const standardCountries = ["Malawi", "Zambia", "Tanzania"];
+                        if(standardCountries.includes(d.country)) {
+                            document.getElementById('country').value = d.country;
+                        } else {
+                            document.getElementById('country').value = "Others";
+                            document.getElementById('otherCountry').value = d.country;
+                            toggleCountryInput();
+                        }
+                    }
+
+                    // Handling Multiple Family Members
+                    if(d.familyMembers && Array.isArray(d.familyMembers)) {
+                        familyMembers = d.familyMembers;
+                        renderFamilyList();
+                    } else if (d.familyRole && d.familyName) { 
+                        // Fallback for old single data format
+                        familyMembers = [`${d.familyRole}_${d.familyName}`];
+                        renderFamilyList();
+                    }
+
+                    if(d.relationship) {
+                        document.getElementById('relationship').value = d.relationship;
+                        document.getElementById('partnerName').value = d.partnerName || "";
+                        toggleRelInput();
+                    }
+
+                    if(d.education) document.getElementById('education').value = d.education;
+                    if(d.occupation) document.getElementById('occupation').value = d.occupation;
+
+                    if (d.createdAt) {
+                        const dt = d.createdAt.toDate();
+                        document.getElementById('regDate').innerText = dt.toLocaleDateString();
+                    }
+                }
+            });
+        }
+    });
+
+    document.getElementById('editProfileForm').onsubmit = async (e) => {
+        e.preventDefault();
+        const user = auth.currentUser;
+        if(!user) return;
+
+        const saveBtn = document.getElementById('saveBtn');
+        saveBtn.innerText = "Saving...";
+        
+        let finalCountry = document.getElementById('country').value;
+        if(finalCountry === "Others") finalCountry = document.getElementById('otherCountry').value;
+
+        const updatedData = {
+            fullName: document.getElementById('fName').value + " " + document.getElementById('lName').value,
+            phone: document.getElementById('phone').value,
+            country: finalCountry,
+            familyMembers: familyMembers, // Saving as Array
+            relationship: document.getElementById('relationship').value,
+            partnerName: document.getElementById('partnerName').value,
+            education: document.getElementById('education').value,
+            occupation: document.getElementById('occupation').value
+        };
+
+        try {
+            await db.collection("users").doc(user.uid).update(updatedData);
+            alert("SEVED!");
+            window.location.href = "dashboard.html";
+        } catch (err) { alert(err.message); }
+        saveBtn.innerText = "SAVE CHANGES";
+    };
+</script>
+<script src="app-engine.js"></script> 
+</body>
+</html>

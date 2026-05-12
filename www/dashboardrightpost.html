@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="ny">
+<head>
+  <meta charset="utf-8">
+  <title>Post</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-regular-rounded/css/uicons-regular-rounded.css">
+  <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-brands/css/uicons-brands.css">
+  <style>
+    :root{--bg:#f4f6f9;--card:#fff;--text:#0a2b4f;--muted:#6c7a90;--border:#ccd3dc;--accent:#0a2b4f;--danger:#c82626}
+    *{box-sizing:border-box}
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,sans-serif;background:var(--bg);margin:0;color:#222}
+    .wrap{max-width:860px;margin:0 auto;padding:16px}
+    .composer{background:var(--card);padding:12px;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,0.06);margin-bottom:16px}
+    .composer h2{margin:6px 0 12px;color:var(--text);font-size:18px}
+    textarea{width:100%;min-height:120px;border:1px solid var(--border);border-radius:10px;padding:10px;font-size:15px;resize:vertical}
+    .row{display:flex;gap:10px;align-items:center;margin-top:10px;flex-wrap:wrap}
+    .btn{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px 14px;cursor:pointer;font-weight:600}
+    .btn[disabled]{opacity:.6;cursor:not-allowed}
+    .icon-btn{border:1px solid var(--border);background:#fff;color:var(--text);cursor:pointer;font-size:18px;padding:8px 10px;border-radius:8px;display:flex;align-items:center;gap:8px}
+    .icon-btn span{font-size:14px;color:var(--muted)}
+    .preview-area{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px}
+    .preview-item{position:relative;width:140px;height:100px;overflow:hidden;border:1px solid var(--border);border-radius:8px;background:#fafbfc}
+    .preview-item img,.preview-item video{width:100%;height:100%;object-fit:cover}
+    .remove-btn{position:absolute;top:6px;right:6px;background:var(--danger);color:#fff;border:none;border-radius:50%;width:24px;height:24px;cursor:pointer;font-size:12px;line-height:24px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.2)}
+    .status{margin-top:10px;font-size:13px;color:var(--muted)}
+    .progress{width:100%;height:6px;background:#e8edf3;border-radius:6px;overflow:hidden;margin-top:8px}
+    .bar{height:100%;width:0%;background:linear-gradient(90deg,#0a2b4f,#2674b4);transition:width .2s}
+  </style>
+  <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-database-compat.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <div class="composer">
+    <h2><i class="fi fi-rr-edit"></i>post</h2>
+    <textarea id="postText" placeholder="Write something...."></textarea>
+    <div class="row">
+      <button class="icon-btn" id="addPhoto"><i class="fi fi-rr-picture"></i><span>Add images</span></button>
+      <button class="icon-btn" id="addVideo"><i class="fi fi-rr-play-alt"></i><span>Add Video (≤10MB)</span></button>
+      <input type="file" id="photoInput" accept="image/*" style="display:none">
+      <input type="file" id="videoInput" accept="video/*" style="display:none">
+    </div>
+    <div class="preview-area" id="previewArea"></div>
+    <div class="row">
+      <button class="btn" id="sendPost"><i class="fi fi-rr-paper-plane"></i> Post</button>
+      <div class="status" id="statusMsg"></div>
+    </div>
+    <div class="progress"><div class="bar" id="progressBar"></div></div>
+  </div>
+</div>
+
+<script>
+  window.CONFIG={
+    firebase:{
+      apiKey: "AIzaSyDt_ayoflnFkRRnS2fXITY2EzJz0KcW5QA",
+      authDomain: "makert-bfb76.firebaseapp.com",
+      databaseURL: "https://makert-bfb76-default-rtdb.firebaseio.com",
+      projectId: "makert-bfb76",
+      storageBucket: "makert-bfb76.firebasestorage.app",
+      messagingSenderId: "245693362931",
+      appId: "1:245693362931:web:e15662a22dd50d2ac63d86"
+    },
+    imgbbApiKey:"dba8c1151016eeb9f9826939c6ca5107",
+    cloudinary:{cloudName:"dmu7ctilf",preset:"WanderSlapp"},
+    limits:{maxVideoBytes:10*1024*1024}
+  };
+  firebase.initializeApp(window.CONFIG.firebase);
+</script>
+
+<script type="module">
+  const auth=firebase.auth();
+  const rtdb=firebase.database();
+  const addPhotoBtn=document.getElementById("addPhoto");
+  const addVideoBtn=document.getElementById("addVideo");
+  const photoInput=document.getElementById("photoInput");
+  const videoInput=document.getElementById("videoInput");
+  const previewArea=document.getElementById("previewArea");
+  const sendPostBtn=document.getElementById("sendPost");
+  const statusMsg=document.getElementById("statusMsg");
+  const progressBar=document.getElementById("progressBar");
+  let files=[];
+  addPhotoBtn.addEventListener("click",()=>photoInput.click());
+  addVideoBtn.addEventListener("click",()=>videoInput.click());
+  photoInput.addEventListener("change",e=>{
+    const f=e.target.files[0];
+    if(!f)return;
+    if(!f.type.startsWith("image"))return;
+    files.push({file:f});
+    renderPreview();
+    photoInput.value="";
+  });
+  videoInput.addEventListener("change",e=>{
+    const f=e.target.files[0];
+    if(!f)return;
+    if(!f.type.startsWith("video"))return;
+    if(f.size>window.CONFIG.limits.maxVideoBytes){alert("Video yanu yakura kwambiri! Chonde onesetsani isapitirire 10MB.");return;}
+    files.push({file:f});
+    renderPreview();
+    videoInput.value="";
+  });
+  function renderPreview(){
+    previewArea.innerHTML="";
+    files.forEach((entry,i)=>{
+      const f=entry.file;
+      const item=document.createElement("div");
+      item.className="preview-item";
+      let el;
+      if(f.type.startsWith("image")){
+        el=document.createElement("img");
+        el.src=URL.createObjectURL(f);
+      }else if(f.type.startsWith("video")){
+        el=document.createElement("video");
+        el.src=URL.createObjectURL(f);
+        el.muted=true;
+        el.play().catch(()=>{});
+      }
+      item.appendChild(el);
+      const rm=document.createElement("button");
+      rm.className="remove-btn";
+      rm.textContent="×";
+      rm.onclick=()=>{files.splice(i,1);renderPreview();};
+      item.appendChild(rm);
+      previewArea.appendChild(item);
+    });
+  }
+  async function uploadToImgbb(file){
+    const fd=new FormData();
+    fd.append("image",file);
+    const res=await fetch(`https://api.imgbb.com/1/upload?key=${window.CONFIG.imgbbApiKey}`,{method:"POST",body:fd});
+    const data=await res.json();
+    if(!res.ok||!data?.data?.url)throw new Error("ImgBB upload failed");
+    return data.data.url;
+  }
+  async function uploadToCloudinaryVideo(file){
+    const fd=new FormData();
+    fd.append("file",file);
+    fd.append("upload_preset",window.CONFIG.cloudinary.preset);
+    const res=await fetch(`https://api.cloudinary.com/v1_1/${window.CONFIG.cloudinary.cloudName}/video/upload`,{method:"POST",body:fd});
+    const data=await res.json();
+    if(!res.ok||!data?.secure_url)throw new Error("Cloudinary upload failed");
+    return data.secure_url;
+  }
+  function setStatus(msg){statusMsg.textContent=msg;}
+  function setProgress(pct){progressBar.style.width=`${pct}%`;}
+  sendPostBtn.addEventListener("click",async ()=>{
+    const u=auth.currentUser;
+    if(!u)return;
+    const text=document.getElementById("postText").value.trim();
+    if(!text&&files.length===0)return;
+    for(const {file:f} of files){
+      if(f.type.startsWith("video")&&f.size>window.CONFIG.limits.maxVideoBytes){
+        alert("Video yanu yakura kwambiri! Chonde onesetsani isapitirire 10MB.");
+        return;
+      }
+    }
+    sendPostBtn.disabled=true;
+    setStatus("progress.....");setProgress(5);
+    const mediaLinks=[];
+    try{
+      let completed=0;
+      for(const {file:f} of files){
+        if(f.type.startsWith("image")){
+          setStatus("progress.....");
+          const url=await uploadToImgbb(f);
+          mediaLinks.push({type:"image",url});
+        }else if(f.type.startsWith("video")){
+          setStatus("progress.....");
+          const url=await uploadToCloudinaryVideo(f);
+          mediaLinks.push({type:"video",url});
+        }
+        completed++;
+        const pct=5+Math.floor((completed/files.length)*85);
+        setProgress(pct);
+      }
+      const hasImage=mediaLinks.some(m=>m.type==="image");
+      const hasVideo=mediaLinks.some(m=>m.type==="video");
+      const postData={uid:u.uid,text:text||"",media:mediaLinks,hasImage,hasVideo,createdAt:Date.now()};
+      setStatus("Finish post.....");
+      await rtdb.ref("posts").push(postData);
+      setProgress(100);
+      const referrer=document.referrer||"dashboard.html";
+      window.location.href=referrer;
+    }catch(err){
+      setStatus("");
+      setProgress(0);
+      sendPostBtn.disabled=false;
+    }
+  });
+</script>
+<script src="app-engine.js"></script> 
+</body>
+</html>

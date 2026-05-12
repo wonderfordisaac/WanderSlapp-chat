@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WanderSlapp - Boost Ad</title>
+    <link rel='stylesheet' href='https://cdn-uicons.flaticon.com/uicons-solid-rounded/css/uicons-solid-rounded.css'>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-database-compat.js"></script>
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; background: #f0f2f5; margin: 0; padding: 15px; color: #1c1e21; }
+        .boost-card { background: white; border-radius: 15px; max-width: 400px; margin: 20px auto; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .header { background: #0a2b4f; color: white; padding: 20px; text-align: center; font-weight: bold; font-size: 18px; letter-spacing: 1px; }
+        .form-body { padding: 20px; }
+        .input-group { margin-bottom: 15px; }
+        label { display: block; font-size: 11px; font-weight: bold; color: #65676b; margin-bottom: 5px; text-transform: uppercase; }
+        input, select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 15px; background: #f9f9f9; box-sizing: border-box; outline: none; transition: 0.3s; }
+        input:focus { border-color: #0a2b4f; background: #fff; }
+        
+        .plan-price-box { 
+            background: #fff9c4; color: #827717; padding: 15px; 
+            border-radius: 8px; text-align: center; font-weight: bold; 
+            font-size: 22px; margin: 15px 0; border: 1px solid #fbc02d;
+        }
+
+        .btn-pay { width: 100%; padding: 15px; background: #0a2b4f; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; transition: 0.2s; }
+        .btn-pay:active { transform: scale(0.98); opacity: 0.9; }
+        .hidden { display: none; }
+        
+        .footer-text { font-size: 11px; color: #888; text-align: center; margin-top: 15px; line-height: 1.4; }
+
+        .back-btn{position:absolute;top:10px;left:0%;padding:8px 12px;background:#0a2b4f;color:white;border:none;border-radius:6px;cursor:pointer;z-index:2}
+    </style>
+</head>
+<body>   
+
+<div class="boost-card">
+    <div class="header"><button class="back-btn" onclick="goBack()">←</button>BOOST AD</div>
+    <div class="form-body">
+        
+        <div class="input-group">
+            <label>Product Name</label>
+            <input type="text" id="adTitle" placeholder="e.g. iPhone 15 Pro">
+        </div>
+
+        <div class="input-group">
+            <label>Price</label>
+            <input type="text" id="adPrice" placeholder="e.g. MK 1,200,000">
+        </div>
+
+        <div class="input-group">
+            <label>Image URL</label>
+            <input type="text" id="adImg" placeholder="https://site.com/image.jpg">
+        </div>
+
+        <div class="input-group">
+            <label>Button Action</label>
+            <select id="btnType" onchange="toggleInputs()">
+                <option value="whatsapp">WhatsApp</option>
+                <option value="download">Download</option>
+                <option value="visit">Visit Website</option>
+                <option value="learn">Learn More</option>
+            </select>
+        </div>
+
+        <div id="phoneArea" class="input-group">
+            <label>WhatsApp Number</label>
+            <input type="number" id="adPhone" placeholder="265...">
+        </div>
+
+        <div id="linkArea" class="input-group hidden">
+            <label>Link (URL)</label>
+            <input type="text" id="adUrl" placeholder="https://...">
+        </div>
+
+        <div class="input-group">
+            <label>Select Plan</label>
+            <select id="plan" onchange="updateAmount()">
+                <option value="1">1 Day</option>
+                <option value="7">7 Days</option>
+                <option value="30">30 Days</option>
+            </select>
+        </div>
+
+        <div class="plan-price-box" id="displayAmt">MK 2,000</div>
+
+        <button class="btn-pay" onclick="processPayment()">PAY NOW</button>
+
+        <div class="footer-text">
+            Your ad will be live on WanderSlapp once payment is confirmed.
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- CHOYAMBA: TENGA PAGE ID KUCHOKERA MU URL ---
+const urlParams = new URLSearchParams(window.location.search);
+const pageID = urlParams.get('pageId');
+
+function goBack() {
+    if (pageID) {
+        location.href = 'page-dashboard.html?pageId=' + pageID;
+    } else {
+        // Ngati palibe ID, bwererani komwe mwachokera
+        window.history.back();
+    }
+}
+
+    // Firebase Setup
+    const firebaseConfig = {
+        apiKey: "AIzaSyDt_ayoflnFkRRnS2fXITY2EzJz0KcW5QA",
+        authDomain: "makert-bfb76.firebaseapp.com",
+        databaseURL: "https://makert-bfb76-default-rtdb.firebaseio.com",
+        projectId: "makert-bfb76",
+        storageBucket: "makert-bfb76.firebasestorage.app",
+        messagingSenderId: "245693362931",
+        appId: "1:245693362931:web:e15662a22dd50d2ac63d86"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const rtdb = firebase.database();    
+
+    // Toggle between Phone and Link inputs
+    function toggleInputs() {
+        const type = document.getElementById("btnType").value;
+        if(type === "whatsapp") {
+            document.getElementById("phoneArea").classList.remove("hidden");
+            document.getElementById("linkArea").classList.add("hidden");
+        } else {
+            document.getElementById("phoneArea").classList.add("hidden");
+            document.getElementById("linkArea").classList.remove("hidden");
+        }
+    }
+
+    // Update Price Display based on Plan
+    function updateAmount() {
+        const plan = document.getElementById("plan").value;
+        let amt = "MK 2,000";
+        if(plan == "7") amt = "MK 10,000";
+        if(plan == "30") amt = "MK 35,000";
+        document.getElementById("displayAmt").innerText = amt;
+    }
+
+    // Process and Send to PesaPal
+    function processPayment() {
+        const adId = "WSL_" + Date.now();
+        const plan = parseInt(document.getElementById("plan").value);
+        const type = document.getElementById("btnType").value;
+
+        let finalAmt = (plan === 1) ? 2000 : (plan === 7 ? 10000 : 35000);
+        let finalLink = (type === "whatsapp") ? document.getElementById("adPhone").value : document.getElementById("adUrl").value;
+
+        // EXPIRY LOGIC: current time + (days * hours * mins * secs * ms)
+        const expiryTime = Date.now() + (plan * 24 * 60 * 60 * 1000);
+
+        const adData = {
+            title: document.getElementById("adTitle").value,
+            price: document.getElementById("adPrice").value,
+            img: document.getElementById("adImg").value,
+            link: finalLink,
+            btnType: type,
+            status: "pending",
+            expiry: expiryTime 
+        };
+
+        // Basic Validation
+        if(!adData.title || !adData.img || !finalLink) {
+            alert("Please fill all fields!");
+            return;
+        }
+
+        // Save to Database then Redirect
+        rtdb.ref("sponsoredAds/" + adId).set(adData).then(() => {
+            // Redirect to PesaPal Payment Page
+            window.location.href = `https://store.pesapal.com/wanderslapp?amount=${finalAmt}&ref=${adId}`;
+        }).catch((error) => {
+            alert("Error saving ad: " + error.message);
+        });
+    }
+</script>
+
+</body>
+</html>

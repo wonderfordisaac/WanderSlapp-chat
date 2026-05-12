@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ny">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invite Friends to Page</title>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
+
+    <style>
+        body { font-family: system-ui; background: #f0f2f5; margin: 0; padding: 15px; }
+        header { background: #0a2b4f; color: white; padding: 15px; display: flex; align-items: center; gap: 15px; border-radius: 8px; margin-bottom: 10px; }
+        .back-btn { cursor: pointer; font-size: 20px; }
+        
+        /* SEARCH BAR STYLE */
+        .search-container { margin-bottom: 15px; position: sticky; top: 0; z-index: 10; background: #f0f2f5; padding: 5px 0; }
+        .search-bar { width: 100%; padding: 12px; border-radius: 25px; border: 1px solid #ddd; box-sizing: border-box; outline: none; font-size: 14px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+
+        .card { background: white; padding: 12px; border-radius: 12px; display: flex; align-items: center; gap: 12px; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); transition: 0.3s; }
+        .card img { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; background: #eee; }
+        .info { flex: 1; }
+        .info b { display: block; font-size: 15px; color: #0a2b4f; }
+        .invite-btn { background: #0a2b4f; color: white; border: none; padding: 8px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px; }
+        .invite-btn:disabled { background: #ccc; color: #666; cursor: not-allowed; }
+        #friendList { min-height: 200px; }
+        .loader { text-align: center; color: gray; margin-top: 50px; }
+    </style>
+</head>
+<body>
+
+<header>
+    <span class="back-btn" onclick="history.back()">←</span>
+    <b>Invite Friends</b>
+</header>
+
+<div class="search-container">
+    <input type="text" id="searchInput" class="search-bar" placeholder="searching..." onkeyup="filterFriends()">
+</div>
+
+<div id="friendList" class="loader">Loading your friends...</div>
+
+<script>
+const firebaseConfig = {
+    apiKey: "AIzaSyDt_ayoflnFkRRnS2fXITY2EzJz0KcW5QA",
+    authDomain: "makert-bfb76.firebaseapp.com",
+    databaseURL: "https://makert-bfb76-default-rtdb.firebaseio.com",
+    projectId: "makert-bfb76",
+    storageBucket: "makert-bfb76.firebasestorage.app",
+    messagingSenderId: "245693362931",
+    appId: "1:245693362931:web:e15662a22dd50d2ac63d86"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const rtdb = firebase.database();
+const auth = firebase.auth();
+
+let myID, pageID, pageName;
+const params = new URLSearchParams(window.location.search);
+pageID = params.get('pageId');
+
+auth.onAuthStateChanged(async user => {
+    if(user) {
+        myID = user.uid;
+        const pgDoc = await db.collection("pages").doc(pageID).get();
+        if(pgDoc.exists) {
+            pageName = pgDoc.data().name;
+            loadFriends();
+        } else {
+            document.getElementById("friendList").innerHTML = "Page not found.";
+        }
+    } else {
+        location.href = 'login.html';
+    }
+});
+
+async function loadFriends() {
+    const listDiv = document.getElementById("friendList");
+    
+    db.collection("friendRequests")
+    .where("status", "==", "confirmed")
+    .onSnapshot(async snap => {
+        listDiv.innerHTML = "";
+        let friendsFound = 0;
+
+        for (const doc of snap.docs) {
+            const r = doc.data();
+            let friendID = (r.from === myID) ? r.to : (r.to === myID ? r.from : null);
+
+            if (friendID) {
+                friendsFound++;
+                const uDoc = await db.collection("users").doc(friendID).get();
+                const u = uDoc.data();
+                if (u) {
+                    renderFriendCard(friendID, u, listDiv);
+                }
+            }
+        }
+
+        if (friendsFound === 0) {
+            listDiv.innerHTML = "<p style='text-align:center; color:gray;'>No friends found.</p>";
+        }
+    });
+}
+
+function renderFriendCard(uid, userData, container) {
+    const card = document.createElement("div");
+    card.className = "card";
+    // Timawonjezera dzina mu data attribute kuti kukhale kosavuta kusefa
+    card.setAttribute("data-name", userData.fullName.toLowerCase());
+    
+    card.innerHTML = `
+        <img src="${userData.profilePhoto || 'https://i.ibb.co/7z5nDqK/avatar.png'}">
+        <div class="info">
+            <b>${userData.fullName}</b>
+        </div>
+        <button class="invite-btn" id="btn-${uid}" onclick="sendInvite('${uid}', '${userData.fullName}')">Invite</button>
+    `;
+    container.appendChild(card);
+}
+
+// LOGIC YA SEARCH BAR
+function filterFriends() {
+    const input = document.getElementById('searchInput').value.toLowerCase();
+    const cards = document.querySelectorAll('.card');
+
+    cards.forEach(card => {
+        const name = card.getAttribute('data-name');
+        if (name.includes(input)) {
+            card.style.display = "flex";
+        } else {
+            card.style.display = "none";
+        }
+    });
+}
+
+function sendInvite(friendID, friendName) {
+    const btn = document.getElementById(`btn-${friendID}`);
+    btn.disabled = true;
+    btn.innerText = "Sent";
+
+    const notifRef = rtdb.ref('notifications').push();
+    notifRef.set({
+        to: friendID,
+        from: myID,
+        message: `I've invited you to follow my page: ${pageName}`,
+        link: `pageProfile.html?pageId=${pageID}`,
+        read: false,
+        timestamp: Date.now(),
+        type: "page_invite"
+    }).catch(err => {
+        btn.disabled = false;
+        btn.innerText = "Invite";
+        alert("Cholakwika chachitika.");
+    });
+}
+</script>
+<script src="appEngine.js"></script> 
+</body>
+</html>

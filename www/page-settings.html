@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ny">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - WanderSlapp</title>
+    
+    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-solid-rounded/css/uicons-solid-rounded.css">
+    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-regular-rounded/css/uicons-regular-rounded.css">
+    
+    <style>
+        :root {
+            --bg: #f8f9fa;
+            --header-bg: #0a142b;
+            --card-bg: #ffffff;
+            --text-main: #0a2b4f;
+            --accent: #28a745;
+            --border: #eeeeee;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            padding: 0;
+            color: var(--text-main);
+            min-height: 100vh;
+        }
+
+        header {
+            background: var(--header-bg);
+            padding: 18px 15px;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .back-link { color: white; text-decoration: none; display: flex; align-items: center; }
+        header h2 { margin: 0; font-size: 18px; font-weight: 800; }
+
+        .settings-container {
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        /* Kapangidwe ka ma list a Settings */
+        .setting-item {
+            background: var(--card-bg);
+            padding: 18px;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            text-decoration: none;
+            color: var(--text-main);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.03);
+            border: 1px solid var(--border);
+            transition: 0.2s;
+        }
+
+        .setting-item:active {
+            transform: scale(0.98);
+            background: #f0f2f5;
+        }
+
+        .setting-item i {
+            font-size: 22px;
+            width: 30px;
+            text-align: center;
+            color: var(--accent);
+        }
+
+        .setting-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .setting-info b {
+            font-size: 15px;
+        }
+
+        .setting-info span {
+            font-size: 12px;
+            color: #65676b;
+        }
+
+        .chevron {
+            font-size: 14px;
+            color: #ccc;
+        }
+
+        /* Section Title */
+        .section-label {
+            margin: 15px 0 5px 10px;
+            font-size: 12px;
+            font-weight: bold;
+            color: #888;
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <button class="back-btn" onclick="goBack()">←</button>
+       
+    <h2>SETTINGS</h2>
+</header>
+
+<div class="settings-container">
+    
+    <div class="section-label">Account Settings</div>
+
+    <a href="edtprofile.html" class="setting-item">
+        <i class="fi fi-sr-user-pen" style="color: #007bff;"></i>
+        <div class="setting-info">
+            <b>Edit Profile</b>
+            <span>Sinthani dzina ndi chithunzi chanu</span>
+        </div>
+        <i class="fi fi-rr-angle-small-right chevron"></i>
+    </a>
+
+    <a href="security.html" class="setting-item">
+        <i class="fi fi-sr-lock" style="color: #ff9500;"></i>
+        <div class="setting-info">
+            <b>Security & Password</b>
+            <span>Tetezani account yanu</span>
+        </div>
+        <i class="fi fi-rr-angle-small-right chevron"></i>
+    </a>
+
+    <div class="section-label">App Preferences</div>
+
+    <a href="worknow1.html" class="setting-item">
+        <i class="fi fi-sr-text-width" style="color: #6f42c1;"></i>
+        <div class="setting-info">
+            <b>Text Size</b>
+            <span>Kulitsa kapena kuchepetsa mawu</span>
+        </div>
+        <i class="fi fi-rr-angle-small-right chevron"></i>
+    </a>
+
+    <a href="worknow1.html" class="setting-item">
+        <i class="fi fi-sr-moon" style="color: #1c1e21;"></i>
+        <div class="setting-info">
+            <b>Dark Mode</b>
+            <span>Sintha maonekedwe a App (Coming Soon)</span>
+        </div>
+        <i class="fi fi-rr-angle-small-right chevron"></i>
+    </a>
+
+    <div class="section-label">Support</div>
+
+    <a href="worknow1.html" class="setting-item">
+        <i class="fi fi-sr-interrogation" style="color: #28a745;"></i>
+        <div class="setting-info">
+            <b>Help & Support</b>
+            <span>Muthu kutilankhula ngati pali vuto</span>
+        </div>
+        <i class="fi fi-rr-angle-small-right chevron"></i>
+    </a>
+
+    <a href="worknow1.html" class="setting-item">
+        <i class="fi fi-sr-info" style="color: #17a2b8;"></i>
+        <div class="setting-info">
+            <b>About WanderSlapp</b>
+            <span>App version ndi malamulo (Terms)</span>
+        </div>
+        <i class="fi fi-rr-angle-small-right chevron"></i>
+    </a>
+
+</div>
+
+<script>
+    // --- CHOYAMBA: TENGA PAGE ID KUCHOKERA MU URL ---
+const urlParams = new URLSearchParams(window.location.search);
+const pageID = urlParams.get('pageId');
+
+function goBack() {
+    if (pageID) {
+        location.href = 'page-dashboard.html?pageId=' + pageID;
+    } else {
+        // Ngati palibe ID, bwererani komwe mwachokera
+        window.history.back();
+    }
+}
+
+</script>
+</body>
+</html>

@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="ny">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Search - WanderSlapp</title>
+  <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-solid-rounded/css/uicons-solid-rounded.css">
+  <style>
+    :root { --bg: #0a142b; --text: #f6fbff; --border: #254a83; --accent: #28a745; --ink: #0a2b4f; }
+    body { font-family: system-ui, -apple-system, sans-serif; background: #fff; margin: 0; padding: 0; color: #333; overflow-x: hidden; }
+    
+    header { background: var(--bg); padding: 15px; position: sticky; top: 0; z-index: 1000; display: flex; align-items: center; gap: 12px; }
+    .back-btn { color: var(--text); font-size: 20px; cursor: pointer; padding: 5px; }
+    .search-input-wrapper { flex: 1; background: #152a4d; border: 1px solid var(--border); border-radius: 25px; display: flex; align-items: center; padding: 8px 15px; }
+    .search-input-wrapper input { background: transparent; border: none; color: white; flex: 1; outline: none; font-size: 16px; }
+
+    #loadingOverlay {
+      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(255,255,255,0.8); z-index: 2000; justify-content: center; align-items: center; flex-direction: column;
+    }
+    .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    .section { padding: 15px 0; border-bottom: 8px solid #f0f2f5; }
+    .section-title { padding: 0 15px 10px; font-weight: bold; color: var(--ink); font-size: 13px; display: flex; align-items: center; justify-content: space-between; text-transform: uppercase; letter-spacing: 0.5px; }
+    
+    .history-item { display: flex; align-items: center; gap: 12px; padding: 10px 15px; cursor: pointer; }
+    .history-text { flex: 1; font-size: 14px; color: #444; }
+    .del-history { color: #ff4d4d; font-size: 14px; padding: 5px; }
+
+    .hashtag-container { display: flex; flex-wrap: wrap; padding: 0 10px; }
+    .hashtag { background: #eef2f7; padding: 8px 16px; border-radius: 20px; margin: 5px; font-size: 13px; font-weight: 600; cursor: pointer; color: #1d1f23; border: 1px solid #ddd; }
+
+    .result-item { display: flex; align-items: center; gap: 12px; padding: 12px 15px; border-bottom: 1px solid #f0f0f0; cursor: pointer; background: #fff; }
+    .avatar { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; background: #eee; flex-shrink: 0; }
+    .avatar.sq { border-radius: 10px; }
+    .info { flex: 1; overflow: hidden; }
+    .info .name { font-weight: 700; font-size: 15px; color: #111; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .info .sub { font-size: 12px; color: #666; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .media-preview { width: 50px; height: 50px; border-radius: 6px; object-fit: cover; margin-left: 10px; background: #eee; }
+    .type-badge { font-size: 10px; background: #eee; padding: 2px 6px; border-radius: 4px; color: #666; margin-right: 5px; text-transform: uppercase; }
+    .no-results { text-align: center; padding: 50px 20px; color: #999; font-size: 14px; }
+  </style>
+</head>
+<body>
+
+<div id="loadingOverlay"><div class="spinner"></div><p style="margin-top:10px; font-size:13px; color:var(--ink)">Searching...</p></div>
+
+<header>
+  <i class="fi fi-sr-arrow-left back-btn" onclick="location.href='dashboard.html'"></i>
+  <form id="searchForm" class="search-input-wrapper" onsubmit="event.preventDefault(); triggerSearch();">
+    <input type="text" id="searchInput" placeholder="Searching..." autocomplete="off" oninput="checkInput(this.value)">
+  </form>
+</header>
+
+<div id="searchContent">
+  <div id="preSearch">
+    <div class="section" id="historyBox" style="display:none">
+      <div class="section-title"><span><i class="fi fi-sr-time-past"></i> History</span><span style="color:var(--accent); font-size:11px; cursor:pointer" onclick="clearAllHistory()">remove</span></div>
+      <div id="historyList"></div>
+    </div>
+    <div class="section" id="trendingBox">
+      <div class="section-title"><span><i class="fi fi-sr-stats"></i> Trending</span></div>
+      <div id="hashtagList" class="hashtag-container"></div>
+    </div>
+    <div class="section">
+      <div class="section-title"><span><i class="fi fi-sr-users-alt"></i> Suggested</span></div>
+      <div id="suggestedList"></div>
+    </div>
+  </div>
+
+  <div id="searchResults" style="display:none">
+    <div id="exactMatchArea"></div>
+    <div id="otherMatchArea" style="background:#fcfcfc"></div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyDt_ayoflnFkRRnS2fXITY2EzJz0KcW5QA",
+    authDomain: "makert-bfb76.firebaseapp.com",
+    databaseURL: "https://makert-bfb76-default-rtdb.firebaseio.com",
+    projectId: "makert-bfb76",
+    storageBucket: "makert-bfb76.firebasestorage.app",
+    appId: "1:245693362931:web:e15662a22dd50d2ac63d86"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+  const rtdb = firebase.database();
+  const auth = firebase.auth();
+
+  let masterData = [];
+
+  auth.onAuthStateChanged(user => { if (user) initApp(); });
+
+  async function initApp() {
+    // 1. Chotsani kuchedwa: Yikani mawu mu box pompo pompo tsamba likatseguka
+    const urlParams = new URLSearchParams(window.location.search);
+    const q = urlParams.get('q');
+    if (q) {
+        document.getElementById("searchInput").value = q;
+        // Onetsani loading overlay nthawi yomweyo kuti user adziwe kuti chinachake chikuchitika
+        document.getElementById("loadingOverlay").style.display = "flex";
+    }
+
+    // 2. Tangani load history kaye (ndizachangu)
+    loadHistory();
+
+    // 3. Dikira masterData (Izi ndizo zimachedwa, koma tikuchedwetsa upamwamba)
+    await loadMasterData();
+    
+    // 4. MasterData ikangotsiriza, yambani search NGATI pali query ku URL
+    if (q) {
+        runSearch(q);
+        document.getElementById("loadingOverlay").style.display = "none";
+    }
+
+    // 5. Malizitsani zotsalira pambuyo pa search
+    loadTrending();
+    showSuggestions();
+}
+
+  function saveToHistory(q) {
+    let history = JSON.parse(localStorage.getItem('ws_sh') || '[]');
+    history = history.filter(item => item !== q);
+    history.unshift(q);
+    localStorage.setItem('ws_sh', JSON.stringify(history.slice(0, 5)));
+  }
+
+  function loadHistory() {
+    const history = JSON.parse(localStorage.getItem('ws_sh') || '[]');
+    const box = document.getElementById("historyBox");
+    const list = document.getElementById("historyList");
+    if(history.length === 0) { box.style.display = "none"; return; }
+    box.style.display = "block";
+    list.innerHTML = history.map(item => `
+      <div class="history-item">
+        <i class="fi fi-sr-time-past"></i>
+        <div class="history-text" onclick="quickSearch('${item}')">${item}</div>
+        <i class="fi fi-sr-cross-small del-history" onclick="deleteHistoryItem('${item}')"></i>
+      </div>`).join('');
+  }
+
+  function quickSearch(val) { document.getElementById("searchInput").value = val; triggerSearch(); }
+  function deleteHistoryItem(item) {
+    let history = JSON.parse(localStorage.getItem('ws_sh') || '[]');
+    localStorage.setItem('ws_sh', JSON.stringify(history.filter(i => i !== item)));
+    loadHistory();
+  }
+  function clearAllHistory() { localStorage.removeItem('ws_sh'); loadHistory(); }
+
+  function triggerSearch() {
+    const q = document.getElementById("searchInput").value.trim();
+    if(q === "") return;
+    saveToHistory(q);
+    document.getElementById("loadingOverlay").style.display = "flex";
+    setTimeout(() => {
+      runSearch(q);
+      document.getElementById("loadingOverlay").style.display = "none";
+    }, 800);
+  }
+
+  async function loadMasterData() {
+    masterData = [];
+    
+    // 1. Users
+    const uSnap = await db.collection("users").get();
+    uSnap.forEach(doc => {
+      masterData.push({
+        id: doc.id,
+        type: 'User',
+        searchVal: doc.data().fullName || "",
+        photo: doc.data().profilePhoto || 'https://i.ibb.co/7z5nDqK/avatar.png',
+        link: `profile.html?uid=${doc.id}`
+      });
+    });
+
+    // 2. Posts (RTDB)
+    const pSnap = await rtdb.ref("posts").once('value');
+    const posts = pSnap.val();
+    if(posts) {
+      for(let key in posts) {
+        let p = posts[key];
+        let owner = masterData.find(u => u.id === p.uid) || { searchVal: "Wander User", photo: "" };
+        masterData.push({
+          id: key,
+          type: 'Post',
+          searchVal: p.text || "",
+          ownerName: owner.searchVal,
+          photo: owner.photo,
+          media: (p.media && p.media[0]) ? p.media[0].url : "",
+          link: `from-search.html?id=${key}#card_${key}`
+        });
+      }
+    }
+  }
+
+  async function runSearch(q) {
+    const query = q.toLowerCase().trim();
+    const pre = document.getElementById("preSearch");
+    const resDiv = document.getElementById("searchResults");
+    const exactArea = document.getElementById("exactMatchArea");
+    const otherArea = document.getElementById("otherMatchArea");
+    
+    pre.style.display="none"; resDiv.style.display="block";
+    exactArea.innerHTML = ""; otherArea.innerHTML = "";
+
+    // 1. Exact Matches (Starts with)
+    let exact = masterData.filter(i => 
+      (i.searchVal && i.searchVal.toLowerCase().startsWith(query)) || 
+      (i.ownerName && i.ownerName.toLowerCase().startsWith(query))
+    );
+
+    // 2. Fuzzy Matches (Contains but doesn't start with)
+    let others = masterData.filter(i => 
+      !exact.includes(i) && (
+        (i.searchVal && i.searchVal.toLowerCase().includes(query)) || 
+        (i.ownerName && i.ownerName.toLowerCase().includes(query))
+      )
+    );
+
+    if(exact.length > 0) {
+      exactArea.innerHTML = `<div class="section-title">Results' "${q}"</div>`;
+      for(let i of exact) exactArea.appendChild(await renderItem(i));
+    }
+    
+    if(others.length > 0) {
+      otherArea.innerHTML = `<div class="section-title">OTHERS</div>`;
+      for(let i of others) otherArea.appendChild(await renderItem(i));
+    }
+
+    if(exact.length === 0 && others.length === 0) {
+      exactArea.innerHTML = `<div class="no-results">No Matches.</div>`;
+    }
+  }
+
+  async function renderItem(item) {
+    const div = document.createElement("div");
+    div.className = "result-item";
+    div.onclick = () => location.href = item.link;
+
+    let title = item.searchVal;
+    let sub = `<span class="type-badge">${item.type}</span>`;
+    let media = "";
+
+    if(item.type === 'Post') {
+      title = item.ownerName;
+      sub += item.searchVal;
+      if(item.media) media = `<img src="${item.media}" class="media-preview">`;
+    }
+
+    div.innerHTML = `
+      <img src="${item.photo}" class="avatar ${item.type !== 'User' ? 'sq' : ''}">
+      <div class="info">
+        <span class="name">${title}</span>
+        <div class="sub">${sub}</div>
+      </div>
+      ${media}
+    `;
+    return div;
+  }
+
+  async function loadTrending() {
+    let tagsMap = {};
+    const pSnap = await rtdb.ref("posts").limitToLast(30).once('value');
+    const posts = pSnap.val();
+    if(posts) {
+      for(let k in posts) {
+        const tags = (posts[k].text || "").match(/#[\w]+/g);
+        if(tags) tags.forEach(t => tagsMap[t] = (tagsMap[t] || 0) + 1);
+      }
+    }
+    const sorted = Object.entries(tagsMap).sort((a,b) => b[1]-a[1]).slice(0, 5);
+    const list = document.getElementById("hashtagList");
+    if(sorted.length > 0) {
+      list.innerHTML = sorted.map(([tag, count]) => `<div class="hashtag" onclick="quickSearch('${tag}')">${tag}</div>`).join('');
+    } else { document.getElementById("trendingBox").style.display="none"; }
+  }
+
+  function showSuggestions() {
+    const list = document.getElementById("suggestedList");
+    list.innerHTML = "";
+    masterData.filter(i => i.type === 'User').slice(0, 3).forEach(async p => list.appendChild(await renderItem(p)));
+  }
+</script>
+<script src="app-engine.js"></script> 
+</body>
+</html>

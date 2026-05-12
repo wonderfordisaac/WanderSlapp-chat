@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="ny">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Index</title>
+  <style>
+    /* STYLE YANU YOYAMBIRIRA */
+    body {
+      font-family: sans-serif;
+      background: #eef2f7;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .container {
+      width: 100%;
+      max-width: 420px;
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 0 12px rgba(0,0,0,0.1);
+    }
+    h2 { text-align: center; color: #0a2b4f }
+    form { display: flex; flex-direction: column; gap: 16px }
+    .row { display: flex; gap: 12px }
+    .row input, .row select { flex: 1 }
+    input, select {
+      padding: 12px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+    }
+    button {
+      padding: 12px;
+      border: none;
+      border-radius: 6px;
+      background: #0a2b4f;
+      color: #fff;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .switch { color: #0a2b4f; text-align: center; cursor: pointer }
+
+    /* --- ZOWONJEZERA ZA MA ACCOUNTS (ZOSASINTHA STYLE YANU) --- */
+    .saved-wrapper { margin-bottom: 20px; display: none; }
+    .accounts-list { 
+      display: flex; 
+      gap: 25px; /* Gap yokwanira pakati pa ma account */
+      overflow-x: auto; 
+      padding: 10px 5px; 
+      scrollbar-width: none; 
+      border-bottom: 1px solid #eee;
+    }
+    .accounts-list::-webkit-scrollbar { display: none; }
+    
+    .account-item { 
+      position: relative; 
+      min-width: 90px; 
+      display: flex; 
+      flex-direction: column; 
+      align-items: center; 
+      cursor: pointer; 
+    }
+    .account-item img { 
+      width: 60px; 
+      height: 60px; 
+      border-radius: 50%; 
+      object-fit: cover; 
+      border: 2px solid #0a2b4f; 
+    }
+    .account-item span { 
+      font-size: 11px; 
+      margin-top: 5px; 
+      color: #333; 
+      text-align: center; 
+      width: 100%;
+      word-wrap: break-word;
+    }
+    .del-icon { 
+      position: absolute; 
+      top: -8px; 
+      right: 5px; 
+      background: red; 
+      color: white; 
+      border: none; 
+      border-radius: 50%; 
+      width: 22px; 
+      height: 22px; 
+      font-size: 14px; 
+      cursor: pointer; 
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    .red-msg { color: red; font-size: 11px; text-align: center; margin-top: 10px; }
+
+      /* copyright */
+    #copyright-message {
+    font-size: 0.80em;            /* 🔧 Uchepetsa size ya mawu */
+    font-weight: 400;             /* 🔧 Mawu asakhale a bold (400 = normal) */
+    font-style: italic;           /* 🔧 Mawu apange style ya italic (kapenanso onjezere ngati mukufuna) */
+    color: #666;                  /* 🔧 Mtundu wa mawu — osakhala wakuda kwambiri */
+    text-align: center;
+    margin-top: 60px;
+    padding: 10px 14px;
+    background-color: #f3f3f3;   
+    font-family: "Segoe UI", sans-serif;  /* 🔧 Font yokongola ya UI */
+   }
+  </style>
+  <link rel='stylesheet' href='https://cdn-uicons.flaticon.com/uicons-solid-rounded/css/uicons-solid-rounded.css'>
+  <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+
+<div class="container">
+  <div id="savedSection" class="saved-wrapper">
+    <div class="accounts-list" id="accountsList"></div>
+    <div class="red-msg">mutha kuchotsa acout ngati mukufuna kuteteza</div>
+  </div>
+
+  <h2 id="formTitle">Login</h2>
+
+  <form id="loginForm">
+    <input type="email" id="loginEmail" placeholder="Email">
+    <input type="password" id="loginPassword" placeholder="Password">
+    <button type="submit">Login</button>
+    <div class="switch" id="toRegister">Create new account</div>
+  </form>
+
+  <form id="registerForm" style="display:none">
+    <div class="row">
+      <input type="text" id="firstName" placeholder="First Name">
+      <input type="text" id="lastName" placeholder="Last Name">
+    </div>
+    <input type="email" id="regEmail" placeholder="Email">
+    <div class="row">
+      <select id="gender">
+        <option value="">Gender</option>
+        <option value="Male">Male</option>
+        <option value="Female">Female</option>
+      </select>
+      <select id="country">
+        <option value="">Country</option>
+        <option value="Malawi">Malawi</option>
+        <option value="Zambia">Zambia</option>
+        <option value="Tanzania">Tanzania</option>
+        <option value="Others">South Africa</option>
+        <option value="Others">Others</option>
+      </select>
+    </div>
+    <div class="row">
+      <input type="text" id="phone" placeholder="Phone Number">
+      <input type="password" id="regPassword" placeholder="Password">
+    </div>
+    <div class="checkbox-row">
+      <input type="checkbox" id="terms">
+      <label for="terms">I agree to terms and conditions<a href="fisrtDocument.html" target="_blank" class="social-link">    
+      <span>read it before sign up</span></a></label>
+    </div>
+    <button type="submit">Register</button>
+    <div class="switch" id="toLogin">Already have account? Login</div>
+  </form>
+</div>  
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyDt_ayoflnFkRRnS2fXITY2EzJz0KcW5QA",
+    authDomain: "makert-bfb76.firebaseapp.com",
+    databaseURL: "https://makert-bfb76-default-rtdb.firebaseio.com",
+    projectId: "makert-bfb76",
+    storageBucket: "makert-bfb76.firebasestorage.app",
+    messagingSenderId: "245693362931",
+    appId: "1:245693362931:web:e15662a22dd50d2ac63d86"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const firestore = firebase.firestore();
+
+  // --- LOGIC YOSUNGA MA ACCOUNT ---
+  
+  function getLocalUsers() {
+    return JSON.parse(localStorage.getItem('savedProfiles') || '[]');
+  }
+
+  async function storeUser(email, password) {
+    const user = auth.currentUser;
+    if(!user) return;
+    try {
+      const uDoc = await firestore.collection("users").doc(user.uid).get();
+      const uData = uDoc.data() || {};
+      let users = getLocalUsers();
+      users = users.filter(u => u.email !== email);
+      users.push({
+        email, password,
+        fullName: uData.fullName || "User",
+        photo: uData.profilePhoto || 'https://i.ibb.co/7z5nDqK/avatar.png'
+      });
+      localStorage.setItem('savedProfiles', JSON.stringify(users));
+      showSaved();
+    } catch(e) { console.log(e); }
+  }
+
+  function deleteProfile(email, e) {
+    e.stopPropagation(); // Letsa kuti isachite login
+    let users = getLocalUsers();
+    users = users.filter(u => u.email !== email);
+    localStorage.setItem('savedProfiles', JSON.stringify(users));
+    showSaved();
+  }
+
+  async function showSaved() {
+    const list = document.getElementById("accountsList");
+    const section = document.getElementById("savedSection");
+    const users = getLocalUsers();
+    
+    if(users.length === 0) {
+      section.style.display = "none";
+      return;
+    }
+    
+    section.style.display = "block";
+    list.innerHTML = "";
+    
+    users.forEach(u => {
+      const item = document.createElement("div");
+      item.className = "account-item";
+      item.onclick = async () => {
+        try {
+          await auth.signInWithEmailAndPassword(u.email, u.password);
+          window.location.href = "dashboard.html";
+        } catch(err) { alert("Error: " + err.message); }
+      };
+      
+      item.innerHTML = `
+        <button class="del-icon" onclick="deleteProfile('${u.email}', event)">×</button>
+        <img src="${u.photo}">
+        <span>${u.fullName}</span>
+      `;
+      list.appendChild(item);
+    });
+  }
+
+  // --- MA FORM LOGIC (YANU IJA) ---
+
+  const loginForm = document.getElementById("loginForm");
+  const registerForm = document.getElementById("registerForm");
+  const formTitle = document.getElementById("formTitle");
+
+  document.getElementById("toRegister").addEventListener("click", () => {
+    loginForm.style.display = "none"; registerForm.style.display = "flex";
+    formTitle.textContent = "Create Account";
+  });
+
+  document.getElementById("toLogin").addEventListener("click", () => {
+    registerForm.style.display = "none"; loginForm.style.display = "flex";
+    formTitle.textContent = "Login";
+  });
+
+  loginForm.onsubmit = async e => {
+    e.preventDefault();
+    const email = document.getElementById("loginEmail").value.trim();
+    const password = document.getElementById("loginPassword").value.trim();
+    try {
+      await auth.signInWithEmailAndPassword(email, password);
+      await storeUser(email, password);
+      window.location.href = "dashboard.html";
+    } catch (err) { alert(err.message); }
+  };
+
+  registerForm.onsubmit = async e => {
+    e.preventDefault();
+    const fName = document.getElementById("firstName").value.trim();
+    const lName = document.getElementById("lastName").value.trim();
+    const email = document.getElementById("regEmail").value.trim();
+    const pass = document.getElementById("regPassword").value.trim();
+    if (!fName || !lName || !email || !pass || !document.getElementById("terms").checked) {
+      alert("please make sure you have written everything."); return;
+    }
+    try {
+      const cred = await auth.createUserWithEmailAndPassword(email, pass);
+      await firestore.collection("users").doc(cred.user.uid).set({
+        fullName: fName + " " + lName,
+        email, createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      await storeUser(email, pass);
+      window.location.href = "dashboard.html";
+    } catch (err) { alert(err.message); }
+  };
+
+  showSaved();
+</script>
+<script src="#"></script> 
+</body>
+</html>

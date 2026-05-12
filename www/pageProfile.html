@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="ny">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WanderSlapp - Page Profile</title>
+  <link rel='stylesheet' href='https://cdn-uicons.flaticon.com/uicons-solid-rounded/css/uicons-solid-rounded.css'>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #fff; margin: 0; padding: 0; }
+    
+    /* NAV-HEADER YOKHAKHALA PAMWAMBA */
+    .nav-header { position: sticky; top: 0; background: #fff; z-index: 1000; padding: 10px 15px; display: flex; align-items: center; border-bottom: 1px solid #f0f2f5; }
+    .back-btn { width: 32px; height: 32px; background: #0a2b4f; color: #fff; border: none; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
+    .profile-content { width: 100%; max-width: 600px; margin: 0 auto; }
+    .cover-section { width: 100%; height: 160px; background: #ddd; position: relative; cursor: pointer; }
+    .cover-section img { width: 100%; height: 100%; object-fit: cover; }
+    
+    .profile-photo-wrapper { width: 100px; height: 100px; border-radius: 50%; border: 4px solid #fff; position: absolute; bottom: -50px; left: 20px; background: #eee; overflow: hidden; z-index: 5; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+    .profile-photo-wrapper img { width: 100%; height: 100%; object-fit: cover; }
+    
+    /* INFO BAR NDI MA BUTTON ANG'ONOANG'ONO */
+    .profile-info-bar { padding: 60px 15px 15px 15px; display: flex; justify-content: space-between; align-items: flex-start; }
+    .page-name { font-size: 22px; font-weight: 800; color: #0a2b4f; }
+    .page-category { font-size: 13px; color: #777; font-weight: 500; margin-top: 2px; }
+    .follower-count { font-size: 13px; color: #555; margin-top: 4px; font-weight: 600; }
+
+    .btn-container { display: flex; gap: 8px; align-items: center; }
+    
+    /* MA BUTTON ANG'ONOANG'ONO (DISCRETE) */
+    .action-btn { padding: 6px 12px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px; display: flex; align-items: center; gap: 5px; }
+    .btn-secondary { background: #e4e6eb; color: #050505; }
+    .btn-primary { background: #0a2b4f; color: white; }
+    .btn-contact { background: #1877f2; color: white; }
+
+    .compose-area { display: none; padding: 15px; background: #fff; border-top: 8px solid #f0f2f5; border-bottom: 8px solid #f0f2f5; }
+    .compose-box { flex: 1; background: #0b1730; border-radius: 12px; color: #fff; padding: 10px; height: 45px; border: 1px solid #254a83; cursor: pointer; width: 100%; font-size: 14px; }
+
+    #profilePostFrame { width: 100%; border: none; display: block; }
+
+    /* MODALS & OVERLAYS */
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 2000; align-items: center; justify-content: center; }
+    .modal-box { background: white; width: 85%; max-width: 300px; border-radius: 12px; overflow: hidden; }
+    .modal-box button { width: 100%; padding: 15px; border: none; background: white; font-size: 16px; border-bottom: 1px solid #eee; cursor: pointer; }
+    
+    #fsOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 5000; flex-direction: column; align-items: center; justify-content: center; }
+    .close-fs { position: absolute; top: 20px; right: 20px; color: #fff; font-size: 30px; cursor: pointer; }
+    #fsContent img { max-width: 100%; max-height: 90vh; }
+
+    #commentOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 10000; background: white; }
+    #commentFrame { width: 100%; height: 100%; border: none; }
+  </style>
+</head>
+<body>
+
+<div id="commentOverlay">
+    <iframe id="commentFrame" src=""></iframe>
+</div>
+
+<div class="nav-header">
+  <button class="back-btn" onclick="goBack()"><i class="fi fi-sr-arrow-left"></i></button>
+  <span style="margin-left: 15px; font-weight: bold; color: #0a2b4f;">Page Profile</span>
+</div>
+
+<div class="profile-content">
+  <div class="cover-section" id="coverDiv" onclick="handlePhotoClick('cover')">
+    <img id="coverImg" src="https://i.ibb.co/7z5nDqK/avatar.png">
+    <div class="profile-photo-wrapper" onclick="event.stopPropagation(); handlePhotoClick('profile')">
+      <img id="profileImg" src="https://i.ibb.co/7z5nDqK/avatar.png">
+    </div>
+  </div>
+
+  <div class="profile-info-bar">
+    <div>
+      <div class="page-name" id="pgName">...</div>
+      <div class="page-category" id="pgCat">Category</div>
+      <div class="follower-count" id="pgFollowers">0 followers</div>
+    </div>
+    
+    <div class="btn-container" id="btnContainer">
+       </div>
+  </div>
+
+  <div class="compose-area" id="composeArea">
+    <textarea class="compose-box" placeholder="What you wont to post now?..." readonly 
+    onclick="location.href='pageProfile-writePost.html?pageId=' + pageID"></textarea>
+</div>
+
+  <iframe id="profilePostFrame" src="" scrolling="no"></iframe>
+</div>
+
+<div id="optionModal" class="modal" onclick="this.style.display='none'">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <button onclick="viewFull()">View Photo</button>
+    <button id="uploadBtn" onclick="document.getElementById(activeType + 'Inp').click(); document.getElementById('optionModal').style.display='none'">Upload New Photo</button>
+    <button onclick="document.getElementById('optionModal').style.display='none'" style="color:red;">Cancel</button>
+  </div>
+</div>
+
+<div id="fsOverlay" onclick="this.style.display='none'">
+    <span class="close-fs">&times;</span>
+    <div id="fsContent"></div>
+</div>
+
+<input type="file" id="coverInp" accept="image/*" style="display:none" onchange="uploadPhoto(this, 'cover')">
+<input type="file" id="profileInp" accept="image/*" style="display:none" onchange="uploadPhoto(this, 'profile')">
+
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
+
+<script>
+const firebaseConfig = {
+    apiKey: "AIzaSyDt_ayoflnFkRRnS2fXITY2EzJz0KcW5QA",
+    authDomain: "makert-bfb76.firebaseapp.com",
+    databaseURL: "https://makert-bfb76-default-rtdb.firebaseio.com",
+    projectId: "makert-bfb76",
+    storageBucket: "makert-bfb76.firebasestorage.app",
+    messagingSenderId: "245693362931",
+    appId: "1:245693362931:web:e15662a22dd50d2ac63d86"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+let myID, pageID, pageData, activeType;
+const urlParams = new URLSearchParams(window.location.search);
+pageID = urlParams.get('pageId'); 
+
+// FUNCTION YA BACK IMENEI NDI YOMWE IKUYANG'ANA KOMWE MUNTHU WACHOKERA
+function goBack() {
+    if (document.referrer !== "" && !document.referrer.includes(window.location.pathname)) {
+        // Ngati pali page lina limene lachokera (ndipo si page lomweli)
+        window.history.back();
+    } else {
+        // Ngati palibe mbiri (mwachitsanzo watsegula link kuchokera kunja), bwerera ku dashboard
+        window.location.href = 'page-dashboard.html?pageId=' + pageID;
+    }
+}
+
+auth.onAuthStateChanged(user => {
+    if(user) {
+        myID = user.uid;
+        loadPageData();
+        document.getElementById("profilePostFrame").src = `pageprofilepost.html?pageId=${pageID}`;
+    }
+});
+
+async function loadPageData() {
+    const doc = await db.collection("pages").doc(pageID).get();
+    if(doc.exists) {
+        pageData = doc.data();
+        document.getElementById("pgName").textContent = pageData.name;
+        document.getElementById("pgCat").textContent = pageData.category;
+        document.getElementById("profileImg").src = pageData.profilePhoto;
+        document.getElementById("coverImg").src = pageData.coverPhoto;
+        
+        const followers = pageData.followers || [];
+        const fCount = followers.length;
+        document.getElementById("pgFollowers").textContent = (fCount >= 1000 ? (fCount/1000).toFixed(1) + "k" : fCount) + " followers";
+
+        setupButtons(followers);
+        
+        if(pageData.owner === myID) {
+            document.getElementById("composeArea").style.display = "block";
+        }
+    }
+}
+
+function setupButtons(followers) {
+    const btnCon = document.getElementById("btnContainer");
+    btnCon.innerHTML = "";
+
+    if(pageData.owner === myID) {
+        btnCon.innerHTML = `<button class="action-btn btn-secondary" onclick="location.href='editPage.html?pageId=${pageID}'">Edit</button>`;
+    } else {
+        const isFollowing = followers.includes(myID);
+        
+        const fBtn = document.createElement("button");
+        fBtn.className = isFollowing ? "action-btn btn-secondary" : "action-btn btn-primary";
+        fBtn.textContent = isFollowing ? "Following" : "Follow";
+        fBtn.onclick = toggleFollow;
+        btnCon.appendChild(fBtn);
+
+        const cBtn = document.createElement("button");
+        cBtn.className = "action-btn btn-contact";
+        
+        if(pageData.linkType === 'whatsapp') {
+            cBtn.innerHTML = `<i class="fi fi-sr-phone-call"></i> WhatsApp`;
+            cBtn.onclick = () => window.open(`https://wa.me/${pageData.linkValue}`);
+        } else if(pageData.linkType === 'email') {
+            cBtn.innerHTML = `<i class="fi fi-sr-envelope"></i> Email`;
+            cBtn.onclick = () => window.open(`mailto:${pageData.linkValue}`);
+        } else {
+            cBtn.innerHTML = `<i class="fi fi-sr-globe"></i> Website`;
+            cBtn.onclick = () => window.open(pageData.linkValue);
+        }
+        btnCon.appendChild(cBtn);
+    }
+}
+
+async function toggleFollow() {
+    const ref = db.collection("pages").doc(pageID);
+    let followers = pageData.followers || [];
+    
+    if(followers.includes(myID)) {
+        followers = followers.filter(id => id !== myID);
+    } else {
+        followers.push(myID);
+    }
+    
+    await ref.update({ followers });
+    pageData.followers = followers; 
+    setupButtons(followers);
+    
+    const fCount = followers.length;
+    document.getElementById("pgFollowers").textContent = (fCount >= 1000 ? (fCount/1000).toFixed(1) + "k" : fCount) + " followers";
+}
+
+function handlePhotoClick(type) {
+    activeType = type;
+    if(pageData.owner === myID) {
+        document.getElementById("optionModal").style.display = "flex";
+    } else {
+        viewFull();
+    }
+}
+
+function viewFull() {
+    const url = activeType === 'cover' ? pageData.coverPhoto : pageData.profilePhoto;
+    if(!url) return;
+    document.getElementById("fsContent").innerHTML = `<img src="${url}">`;
+    document.getElementById("fsOverlay").style.display = "flex";
+}
+
+async function uploadPhoto(input, type) {
+    const file = input.files[0];
+    if(!file) return;
+    const apiKey = "6cd76cd441b1c0779a48c166439c8ffe";
+    const formData = new FormData();
+    formData.append("image", file);
+    const res = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, { method: "POST", body: formData });
+    const data = await res.json();
+    const url = data.data.url;
+    
+    const update = {};
+    update[type === 'cover' ? 'coverPhoto' : 'profilePhoto'] = url;
+    await db.collection("pages").doc(pageID).update(update);
+    location.reload();
+}
+
+window.addEventListener("message", (e) => {
+    if (e.data.type === "SET_HEIGHT") {
+        document.getElementById("profilePostFrame").style.height = e.data.height + "px";
+    }
+    if (e.data.type === "FULL_SCREEN") {
+        document.getElementById("fsContent").innerHTML = e.data.content;
+        document.getElementById("fsOverlay").style.display = "flex";
+    }
+    if (e.data.type === "OPEN_COMMENTS") {
+        const overlay = document.getElementById("commentOverlay");
+        const frame = document.getElementById("commentFrame");
+        frame.src = `comment.html?pid=${e.data.pid}&owner=${e.data.owner}`; 
+        overlay.style.display = "block";
+        document.body.style.overflow = "hidden";
+    }
+    if (e.data.type === "CLOSE_COMMENTS") {
+        document.getElementById("commentOverlay").style.display = "none";
+        document.body.style.overflow = "auto";
+    }
+});
+</script>
+  <script src="sweech.js"></script> 
+  <script src="invite.js"></script>
+  <script src="app-engine.js"></script> 
+</body>
+</html>

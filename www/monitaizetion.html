@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="ny">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WanderSlapp Monetization</title>
+    
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
+    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-solid-rounded/css/uicons-solid-rounded.css">
+
+    <style>
+        :root { --main: #0a142b; --accent: #28a745; --bg: #f0f2f5; --white: #ffffff; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 0; }
+        
+        header { background: var(--main); color: white; padding: 15px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 1000; }
+        .back-btn { color: white; text-decoration: none; font-size: 20px; }
+        
+        .container { padding: 10px; }
+        .card { background: var(--white); border-radius: 15px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .balance-box { background: linear-gradient(135deg, #0f2027, #203a43); color: white; text-align: center; padding: 25px; border-radius: 20px; position: relative; }
+        .balance-box h1 { margin: 10px 0; font-size: 32px; color: #fbff00; }
+        
+        .stat-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f0f0f0; font-size: 14px; }
+        .stat-row:last-child { border: none; }
+        .section-title { font-weight: 800; font-size: 13px; color: #888; text-transform: uppercase; margin: 15px 0 10px 5px; text-align: center; }
+
+        .btn-withdraw { position: absolute; right: 15px; top: 15px; background: var(--accent); color: white; border: none; padding: 8px 15px; border-radius: 30px; font-weight: bold; font-size: 12px; }
+        .btn-save { background: var(--accent); color: white; border: none; padding: 15px; width: 100%; border-radius: 10px; font-weight: bold; margin-top: 20px; }
+
+        .overlay-page { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 2000; overflow-y: auto; }
+        .form-group { margin-bottom: 15px; padding: 0 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 13px; }
+        input, select { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; }
+
+        #popup { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 85%; background: white; padding: 20px; border-radius: 20px; z-index: 3000; text-align: center; box-shadow: 0 0 50px rgba(0,0,0,0.5); }
+        .contact-box { display: flex; justify-content: space-around; margin-top: 20px; }
+        .contact-btn { padding: 10px; border-radius: 10px; text-decoration: none; color: white; font-size: 12px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div id="mainUI">
+    <header>
+        <a href="menu.html" class="back-btn"><i class="fi fi-sr-arrow-left"></i></a>
+        <h2>MONETIZATION</h2>
+        <i class="fi fi-sr-settings" style="cursor:pointer" onclick="showPage('settingsPage')"></i>
+    </header>
+
+    <div class="container">
+        <div class="balance-box">
+            <small>Total Monetization Money</small>
+            <h1 id="totalMoney">MK0.00</h1>
+            <button class="btn-withdraw" onclick="showPage('withdrawPage')">WITHDRAW</button>
+        </div>
+
+        <div class="section-title">Last 28 days</div>
+        <div class="card">
+            <div class="stat-row"><span>Posts</span> <b id="st_posts">0</b></div>
+            <div class="stat-row"><span>Comments</span> <b id="st_comments">0</b></div>
+            <div class="stat-row"><span>Likes</span> <b id="st_likes">0</b></div>
+            <div class="stat-row"><span>Share</span> <b id="st_shares">0</b></div>
+        </div>
+
+        <div class="section-title">MEDIA</div>
+        <div class="card">
+            <div class="stat-row"><span>Videos</span> <b id="st_videos">0</b></div>
+            <div class="stat-row"><span>Images</span> <b id="st_images">0</b></div>
+        </div>
+
+        <div class="section-title">WanderSlapp ads</div>
+        <div class="card">
+            <div class="stat-row"><span>Ads Received</span> <b id="st_ads">0</b></div>
+        </div>
+
+        <div class="card" style="text-align: center; border: 2px dashed var(--accent);">
+            <span>You buildCommunity</span> <b id="st_comm" style="color:var(--accent)">0%</b>
+        </div>
+    </div>
+</div>
+
+<div id="regPage" class="overlay-page" style="display: block;">
+    <header><a href="menu.html" class="back-btn"><i class="fi fi-sr-arrow-left"></i></a><h2>Register Monetization</h2></header>
+    <div style="padding:20px;">
+        <div class="form-group"><label>Full Name</label><input type="text" id="regName" readonly></div>
+        <div class="form-group"><label>Age (d/m/y)</label><input type="text" id="regAge" placeholder="20/05/1998"></div>
+        <div class="form-group"><label>Country</label>
+            <select id="regCountry"><option>MALAWI</option><option>ZAMBIYA</option></select>
+        </div>
+        <div class="form-group"><label>Payment Method</label>
+            <select id="regMethod" onchange="togglePay('reg')">
+                <option value="AIRTEL MONAY">AIRTEL MONAY</option>
+                <option value="TNM MPAMBA">TNM MPAMBA</option>
+                <option value="NATIONAL BANK">NATIONAL BANK</option>
+            </select>
+        </div>
+        <div id="reg_pay_inputs">
+            <div class="form-group"><label id="numLabel">Phone Number</label><input type="number" id="regNumber" placeholder="eg: 099..."></div>
+            <div class="form-group"><label>Account Name (Lomwe limaoneka)</label><input type="text" id="regAccName" placeholder="eg: Isaac Wonderford"></div>
+        </div>
+        <button class="btn-save" onclick="saveReg()">SAVE</button>
+    </div>
+</div>
+
+<div id="withdrawPage" class="overlay-page">
+    <header><i class="fi fi-sr-arrow-left" onclick="hidePage('withdrawPage')"></i> <h2>Withdraw</h2></header>
+    <div class="container">
+        <div class="card" style="text-align:center">
+            <small>Available Balance</small>
+            <h2 id="drawBal" style="color:var(--accent)">MK0.00</h2>
+        </div>
+        <div class="form-group"><label>amount you withdraw</label><input type="number" id="amtToDraw"></div>
+        <button class="btn-save" onclick="doWithdraw()">WITHDRAW</button>
+    </div>
+</div>
+
+<div id="settingsPage" class="overlay-page">
+    <header><i class="fi fi-sr-arrow-left" onclick="hidePage('settingsPage')"></i> <h2>Monetization Settings</h2></header>
+    <div style="padding:20px;">
+        <div class="form-group"><label>Age</label><input type="text" id="setAge"></div>
+        <div class="form-group"><label>Country</label>
+            <select id="setCountry"><option>MALAWI</option><option>ZAMBIYA</option></select>
+        </div>
+        <div class="form-group"><label>Payment Method</label>
+            <select id="setMethod" onchange="togglePay('set')">
+                <option value="AIRTEL MONAY">AIRTEL MONAY</option>
+                <option value="TNM MPAMBA">TNM MPAMBA</option>
+                <option value="NATIONAL BANK">NATIONAL BANK</option>
+            </select>
+        </div>
+        <div class="form-group"><label id="setNumLabel">Number</label><input type="number" id="setNumber"></div>
+        <div class="form-group"><label>Account Name</label><input type="text" id="setAccName"></div>
+    </div>
+    <button class="btn-save" onclick="updateSettings()" style="margin: 0 20px; width: calc(100% - 40px);">SAVE CHANGES</button>
+</div>
+
+<div id="popup">
+    <div id="popContent"></div>
+    <div class="contact-box">
+        <a href="mailto:wanderslapp@gmail.com" class="contact-btn" style="background:#ea4335">EMAIL</a>
+        <a href="https://wa.me/265990914737" class="contact-btn" style="background:#25d366">WHATSAPP</a>
+    </div>
+    <button class="btn-save" onclick="location.reload()">OK</button>
+</div>
+
+
+<script>
+const firebaseConfig = {
+    apiKey: "AIzaSyDt_ayoflnFkRRnS2fXITY2EzJz0KcW5QA",
+    authDomain: "makert-bfb76.firebaseapp.com",
+    databaseURL: "https://makert-bfb76-default-rtdb.firebaseio.com",
+    projectId: "makert-bfb76",
+    storageBucket: "makert-bfb76.firebasestorage.app",
+    messagingSenderId: "245693362931",
+    appId: "1:245693362931:web:e15662a22dd50d2ac63d86"
+};
+firebase.initializeApp(firebaseConfig);
+const rtdb = firebase.database();
+const auth = firebase.auth();
+const fs = firebase.firestore();
+
+let myID, myBal = 0, userMonData = null;
+
+auth.onAuthStateChanged(user => {
+    if(user){
+        myID = user.uid;
+        checkStatus();
+    }
+});
+
+function checkStatus() {
+    rtdb.ref(`monitization_users/${myID}`).on('value', snap => {
+        if(!snap.exists()){
+            document.getElementById("regPage").style.display = "block";
+            document.getElementById("mainUI").style.display = "none";
+            fs.collection("users").doc(myID).get().then(doc => { document.getElementById("regName").value = doc.data().fullName; });
+        } else {
+            userMonData = snap.val();
+            document.getElementById("regPage").style.display = "none";
+            document.getElementById("mainUI").style.display = "block";
+            loadRealtimeStats();
+        }
+    });
+}
+
+function loadRealtimeStats() {
+    rtdb.ref(`monit_stats/${myID}`).on('value', snap => {
+        const d = snap.val() || {};
+        document.getElementById("st_posts").innerText = d.posts || 0;
+        document.getElementById("st_comments").innerText = d.comments || 0;
+        document.getElementById("st_likes").innerText = d.likes || 0;
+        document.getElementById("st_shares").innerText = d.shares || 0;
+        document.getElementById("st_videos").innerText = d.videos || 0;
+        document.getElementById("st_images").innerText = d.images || 0;
+        document.getElementById("st_ads").innerText = (d.ads_image_views || 0) + (d.ads_video_views || 0);
+        
+        let money = (d.likes || 0) * 5.50 + (d.comments || 0) * 10.50 + (d.shares || 0) * 1.00;
+        money += (d.ads_image_views || 0) * 25.00 + (d.ads_video_views || 0) * 10.00;
+        
+        let comm = d.build_community || 0;
+        money += Math.floor(comm / 5) * 5;
+        
+        let adjustment = d.admin_adjustment || 0;
+        
+        myBal = (money + adjustment) - (d.total_withdrawn || 0);
+
+        document.getElementById("totalMoney").innerText = `MK${myBal.toFixed(2)}`;
+        document.getElementById("drawBal").innerText = `MK${myBal.toFixed(2)}`;
+        document.getElementById("st_comm").innerText = comm + "%";
+    });
+}
+
+function togglePay(mode) {
+    const method = document.getElementById(mode === 'reg' ? 'regMethod' : 'setMethod').value;
+    const label = document.getElementById(mode === 'reg' ? 'numLabel' : 'setNumLabel');
+    label.innerText = method === "NATIONAL BANK" ? "Bank Account Number" : "Phone Number";
+}
+
+function saveReg() {
+    const data = {
+        fullName: document.getElementById("regName").value,
+        age: document.getElementById("regAge").value,
+        country: document.getElementById("regCountry").value,
+        method: document.getElementById("regMethod").value,
+        payNumber: document.getElementById("regNumber").value,
+        payAccName: document.getElementById("regAccName").value
+    };
+    if(!data.payNumber || !data.payAccName) return alert("Please fill out all the requirements!");
+    rtdb.ref(`monitization_users/${myID}`).set(data);
+}
+
+function updateSettings() {
+    const data = {
+        age: document.getElementById("setAge").value,
+        country: document.getElementById("setCountry").value,
+        method: document.getElementById("setMethod").value,
+        payNumber: document.getElementById("setNumber").value,
+        payAccName: document.getElementById("setAccName").value
+    };
+    rtdb.ref(`monitization_users/${myID}`).update(data).then(() => {
+        alert("SAVED!");
+        hidePage('settingsPage');
+    });
+}
+
+function doWithdraw() {
+    const amt = parseFloat(document.getElementById("amtToDraw").value);
+    
+    // --- CHIDINDO CHATSOPANO CHOYESA 1000 ---
+    if(amt < 1000) return alert("withdraw has started at 1000. Get more friends to comment on your posts, to increase your income");
+    // ----------------------------------------
+
+    if(amt > myBal) return alert("check if the balance is correct!");
+    
+    const request = {
+        amount: amt,
+        date: new Date().toLocaleString(),
+        userDetails: userMonData
+    };
+
+    rtdb.ref(`withdraw_history/${myID}`).push(request);
+    rtdb.ref(`monit_stats/${myID}/total_withdrawn`).transaction(c => (c || 0) + amt);
+
+    document.getElementById("popContent").innerHTML = `
+        <h2 style="color:var(--accent)">MK${amt} your withdraw!</h2>
+        <p>money send to: <b>${userMonData.method} (${userMonData.payNumber})</b></p>
+        <p style="font-size:11px;">You have to wait 24hrs for the money to reach your account.<br>If it does not arrive after this time, contact our Suporting Teem</p>
+    `;
+    document.getElementById("popup").style.display = "block";
+}
+
+function showPage(id) { 
+    document.getElementById(id).style.display = "block"; 
+    if(id === 'settingsPage') {
+        document.getElementById("setAge").value = userMonData.age;
+        document.getElementById("setCountry").value = userMonData.country;
+        document.getElementById("setMethod").value = userMonData.method;
+        document.getElementById("setNumber").value = userMonData.payNumber;
+        document.getElementById("setAccName").value = userMonData.payAccName;
+        togglePay('set');
+    }
+}
+function hidePage(id) { document.getElementById(id).style.display = "none"; }
+</script>
+ 
+</body>
+</html>

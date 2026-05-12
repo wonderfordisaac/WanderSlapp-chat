@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="ny">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WanderSlapp</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <style>
+        body, html {
+            height: 100%;
+            margin: 0;
+            font-family: 'Arial Black', sans-serif; /* Font yokhuthala kuti ioneke bwino */
+            overflow: hidden;
+        }
+
+        /* Background - Yoyendetsedwa ndi JavaScript */
+        #slideshow {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background-size: cover;
+            background-position: center;
+            transition: background-image 1.2s ease-in-out;
+        }
+
+        .main-container {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            text-align: center;
+            /* Mtundu wa Yellow wowala kwambiri */
+            color: #FFFF00; 
+        }
+
+        .main-content { margin-top: auto; margin-bottom: auto; }
+
+        h1 {
+            font-size: 3rem;
+            margin: 0;
+            text-transform: uppercase;
+            /* Shadow yakuda kuti zilembo zipatuke ku background */
+            text-shadow: 3px 3px 10px rgba(0, 0, 0, 1), -2px -2px 5px rgba(0, 0, 0, 1);
+        }
+
+        .back-btn{position:absolute;top:20px;left:0%;padding:8px 12px;background:#e7092f;color:#fff;border:none;border-radius:6px;cursor:pointer;z-index:1000}
+
+        .services-list {
+            list-style: none;
+            padding: 0;
+            font-size: 1.8rem;
+            font-weight: bold;
+        }
+
+        .services-list li {
+            margin: 20px 0;
+            text-shadow: 2px 2px 8px rgba(0, 0, 0, 1);
+        }
+
+        /* CONTACT BAR PANSI */
+        .contact-bar {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding-bottom: 50px;
+        }
+
+        .contact-item {
+            flex: 1;
+            text-decoration: none;
+            color: #FFFF00; /* Yellow pama link onse */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-weight: 900;
+            text-shadow: 2px 2px 5px rgba(0, 0, 0, 1);
+        }
+
+        .contact-item i { 
+            font-size: 2.5rem; 
+            margin-bottom: 8px;
+            /* Izi zipangitsa ma icon nawo kukhala ndi mthunzi wakuda */
+            filter: drop-shadow(2px 2px 4px rgba(0,0,0,1));
+        }
+
+        /* Tinasunga mitundu ya ma logo koma tawaonjezera kuwala */
+        .fa-whatsapp { color: #25D366; }
+        .fa-envelope { color: #ffffff; } /* Email ndaika yoyera kuti ifanane ndi yellow */
+        .fa-facebook { color: #1877F2; }
+
+        @media (max-width: 480px) {
+            h1 { font-size: 2rem; }
+            .services-list { font-size: 1.4rem; }
+            .contact-item { font-size: 0.8rem; }
+        }        
+    </style>
+</head>
+<body>
+    <button class="back-btn" onclick="window.location.href='menu.html'"><mark>Back</button>
+
+    <div id="slideshow"></div>
+
+    <div class="main-container">
+        <div class="main-content">
+            <h1>Dikirani<br>pang'on</h1>
+            <ul class="services-list">
+                <li>Ziwani kuti tikugwira nthito usana ndi utsiku<br>cholinga ndichoti;</li>
+                <li>Tibweretse zambiri zosangalatsa;<br>ndi Zothandiza kwa inu</li>               
+            </ul>
+            <p>Ngat mukufuna kudziwa zambiri tipezeni<br>panjira zomwe zili mmutsizi</p>
+            <h1>👇</h1>
+        </div>
+
+        <div class="contact-bar">
+            <a href="https://wa.me/2650990914737" class="contact-item">
+                <i class="fab fa-whatsapp"></i>
+                <span>WHATSAPP</span>
+            </a>
+            <a href="mailto:wanderslappprograms@gmail.com" class="contact-item">
+                <i class="fas fa-envelope"></i>
+                <span>EMAIL</span>
+            </a>
+            <a href="https://facebook.com/dzina-lanu" class="contact-item">
+                <i class="fab fa-facebook"></i>
+                <span>FACEBOOK</span>
+            </a>
+        </div>
+    </div>
+
+    <script>
+        const zithunzi = [
+            "https://iili.io/fpudALQ.jpg",
+            "https://iili.io/fpuduhx.jpg",
+            "https://iili.io/fpud7EB.jpg",
+            "https://iili.io/fpudXBp.png"
+        ];
+
+        const nthawi = 5000; // Masekondi 5
+        let index = 0;
+        const div = document.getElementById("slideshow");
+
+        function sinthaChithunzi() {
+            div.style.backgroundImage = `url('${zithunzi[index]}')`;
+            index = (index + 1) % zithunzi.length;
+        }
+
+        sinthaChithunzi();
+        setInterval(sinthaChithunzi, nthawi);
+    </script>
+
+</body>
+</html>

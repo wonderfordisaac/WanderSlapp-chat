@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="ny">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">  
+  <title>WanderSlapp Photo Editor</title>
+  <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-solid-rounded/css/uicons-solid-rounded.css">
+  <style>
+    :root { --bg: #000; --card: #1a1a1a; --accent: #28a745; --blue: #007bff; }
+    body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; margin: 0; overflow: hidden; touch-action: none; }
+    
+    header { text-align: center; padding: 10px; font-weight: bold; border-bottom: 1px solid #222; font-size: 14px; color: var(--accent); letter-spacing: 1px; }
+
+    /* Top Toolbar */
+    .top-toolbar { display: flex; justify-content: space-between; padding: 10px; background: #111; z-index: 10; border-bottom: 1px solid #222; }
+    .btn-group { display: flex; gap: 8px; }
+    
+    .tool-btn {
+      display: flex; flex-direction: column; align-items: center;
+      background: var(--card); border: 1px solid #333; color: white;
+      padding: 6px; border-radius: 10px; width: 68px; font-size: 9px; cursor: pointer;
+      transition: 0.3s;
+    }
+    .tool-btn:active { transform: scale(0.9); }
+    .tool-btn i { font-size: 16px; margin-bottom: 3px; }
+    .blue-btn { border-color: var(--blue); color: var(--blue); }
+    .green-btn { border-color: var(--accent); color: var(--accent); }
+    .gold-btn { border-color: #ffc107; color: #ffc107; }
+
+    /* Filter Bar */
+    .filter-bar {
+      display: flex; gap: 10px; overflow-x: auto; padding: 12px;
+      background: #0a0a0a; border-bottom: 1px solid #222;
+      scrollbar-width: none;
+    }
+    .filter-bar::-webkit-scrollbar { display: none; }
+    .filter-opt {
+      padding: 8px 18px; border-radius: 25px; background: #222;
+      font-size: 11px; white-space: nowrap; cursor: pointer; border: 1px solid #444;
+      transition: 0.2s;
+    }
+    .filter-opt.active { background: var(--blue); border-color: white; font-weight: bold; }
+
+    /* Preview Stage */
+    .preview-stage { display: flex; justify-content: center; padding-top: 15px; }
+    #preview-box {
+      width: 92vw; height: 60vh; background: #222;
+      border: 2px solid #333; position: relative; overflow: hidden;
+      background-size: cover; background-position: center;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+    }
+    #user-img {
+      position: absolute; top: 20%; left: 10%;
+      width: 220px; cursor: move; touch-action: none;
+      filter: brightness(1) contrast(1) saturate(1);
+      transform-origin: center center;
+    }
+    #user-img.selected { border: 2px solid var(--blue); }
+
+    /* Draggable Text */
+    .text-wrapper { position: absolute; top: 50%; left: 30%; touch-action: none; transform-origin: center center; }
+    .draggable-text {
+      color: white; font-size: 30px; font-weight: bold;
+      white-space: nowrap; cursor: move; padding: 5px;
+      border: 2px solid transparent; transform-origin: center center;
+    }
+    .text-wrapper.selected .draggable-text { border: 2px dashed var(--accent); }
+    .delete-text-btn {
+      position: absolute; top: -20px; right: -20px; background: #ff3b3b;
+      color: white; border-radius: 50%; width: 25px; height: 25px;
+      display: none; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: bold; border: 2px solid white; z-index: 100;
+    }
+    .text-wrapper.selected .delete-text-btn { display: flex; }
+
+    /* Footer */
+    .footer { text-align: center; padding: 20px; }
+    .btn-download {
+      background: var(--accent); color: white; border: none;
+      padding: 16px; width: 90%; border-radius: 40px;
+      font-weight: bold; font-size: 16px; box-shadow: 0 5px 20px rgba(40, 167, 69, 0.4);
+      display: flex; align-items: center; justify-content: center; gap: 10px; margin: 0 auto;
+    }
+
+    /* Overlays */
+    #theme-overlay, #text-overlay {
+      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.95); z-index: 2000; padding: 20px; overflow-y: auto;
+    }
+    .theme-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 20px; padding-bottom: 50px; }
+    .theme-item { background: #1a1a1a; border-radius: 12px; overflow: hidden; aspect-ratio: 1; border: 2px solid transparent; position: relative; }
+    .theme-item img { width: 100%; height: 100%; object-fit: cover; }
+    .close-btn { background: #ff3b3b; color: white; border: none; padding: 12px 25px; border-radius: 10px; float: right; font-weight: bold; }
+    
+    .text-input-container { margin-top: 60px; text-align: center; }
+    #text-field { width: 90%; padding: 15px; font-size: 20px; background: #222; border: 1px solid #444; color: white; border-radius: 10px; margin-bottom: 20px; }
+    
+    .font-bar { display: flex; gap: 10px; overflow-x: auto; padding: 10px; margin-bottom: 15px; scrollbar-width: none; }
+    .font-bar::-webkit-scrollbar { display: none; }
+    .font-item { padding: 8px 15px; background: #333; border-radius: 5px; white-space: nowrap; cursor: pointer; border: 1px solid #555; }
+    .font-item.active { border-color: var(--accent); color: var(--accent); }
+
+    .color-palette { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 20px; max-height: 150px; overflow-y: auto; padding: 10px; }
+    .color-dot { width: 35px; height: 35px; border-radius: 50%; border: 2px solid #fff; cursor: pointer; }
+  </style>
+</head>
+<body onclick="deselectAll(event)">
+
+<header>WANDERSLAPP STUDIO </header>
+
+<div class="top-toolbar">
+  <div class="btn-group">
+    <button class="tool-btn blue-btn" onclick="document.getElementById('inputImg').click()">
+      <i class="fi fi-sr-picture"></i>ADD IMAGE
+    </button>
+    <button class="tool-btn gold-btn" onclick="openTextEditor()">
+      <i class="fi fi-sr-text"></i>ADD TEXT
+    </button>
+  </div>
+  <div class="btn-group">
+    <button class="tool-btn blue-btn" id="remove-btn" onclick="removeBG()">
+      <i class="fi fi-sr-magic-wand"></i>REMOVE BG
+    </button>
+    <button class="tool-btn green-btn" onclick="openThemes()">
+      <i class="fi fi-sr-layers"></i>THEMES
+    </button>
+  </div>
+  <div class="btn-group">
+    <button class="tool-btn green-btn" onclick="applyNow()">
+      <i class="fi fi-sr-check"></i>ADD NOW
+    </button>
+  </div>
+</div>
+
+<div class="filter-bar" id="filter-container">
+  <div class="filter-opt active" onclick="applyFilter('none', this)">Normal</div>
+</div>
+
+<div class="preview-stage">
+  <div id="preview-box">
+    <img id="user-img" src="" style="display:none;" draggable="false">
+  </div>
+</div>
+
+<div class="footer">
+  <button class="btn-download" id="dl-btn" onclick="downloadProject()">
+    <i class="fi fi-sr-disk"></i> DOWNLOAD PROJECT
+  </button>
+</div>
+
+<input type="file" id="inputImg" hidden accept="image/*" onchange="loadUserPhoto(this)">
+<input type="file" id="inputCustomBG" hidden accept="image/*" onchange="loadFromGallery(this)">
+
+<div id="theme-overlay">
+  <button class="close-btn" onclick="closeThemes()">CLOSE</button>
+  <h3 style="color: var(--accent); margin-top: 10px;">SELECT BACKGROUND</h3>
+  <div class="theme-grid" id="theme-list">
+    <div class="theme-item" onclick="document.getElementById('inputCustomBG').click()" style="display:flex; justify-content:center; align-items:center; background:#222;">
+      <i class="fi fi-sr-upload" style="color:var(--blue); font-size:24px;"></i>
+    </div>
+  </div>
+</div>
+
+<div id="text-overlay">
+  <button class="close-btn" onclick="closeTextEditor()">BACK</button>
+  <div class="text-input-container">
+    <input type="text" id="text-field" placeholder="Lembani mawu anu...">
+    <div class="font-bar" id="font-bar"></div>
+    <div class="color-palette" id="color-palette"></div>
+    <button class="tool-btn green-btn" style="width:150px; height:50px; font-size:16px;" onclick="addTextToPreview()">DONE & ADD</button>
+  </div>
+</div>
+
+<script>
+  let selectedBG = "";
+  let currentTarget = null; 
+  let imgState = { x: 0, y: 0, scale: 1, rotate: 0 };
+  let textState = { x: 0, y: 0, scale: 1, rotate: 0 };
+  let selectedTextColor = "#ffffff";
+  let selectedFont = "Segoe UI";
+
+  const userImg = document.getElementById('user-img');
+  const previewBox = document.getElementById('preview-box');
+
+  // --- 1. FONTS ---
+  const fonts = ['Segoe UI', 'Impact', 'cursive', 'monospace', 'serif', 'Georgia', 'Arial', 'Brush Script MT'];
+  const fontBar = document.getElementById('font-bar');
+  fonts.forEach(f => {
+    const div = document.createElement('div');
+    div.className = 'font-item';
+    div.innerText = 'Style';
+    div.style.fontFamily = f;
+    div.onclick = () => { selectedFont = f; document.getElementById('text-field').style.fontFamily = f; };
+    fontBar.appendChild(div);
+  });
+
+  // --- 2. COLORS ---
+  const colors = ['#ffffff', '#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff', '#ffa500'];
+  const palette = document.getElementById('color-palette');
+  colors.forEach(c => {
+    const dot = document.createElement('div');
+    dot.className = 'color-dot';
+    dot.style.background = c;
+    dot.onclick = () => { selectedTextColor = c; document.getElementById('text-field').style.color = c; };
+    palette.appendChild(dot);
+  });
+
+  // --- 3. FILTERS (150) ---
+  const fContainer = document.getElementById('filter-container');
+  for(let i=1; i<=100; i++) {
+    const div = document.createElement('div');
+    div.className = 'filter-opt';
+    div.innerText = "Filter " + i;
+    div.onclick = () => applyFilter(`hue-rotate(${i*15}deg) saturate(1.5)`, div);
+    fContainer.appendChild(div);
+  }
+  for(let j=1; j<=50; j++) {
+    const div = document.createElement('div');
+    div.className = 'filter-opt';
+    div.style.borderColor = "#28a745";
+    div.innerText = "Ultra HD " + j;
+    div.onclick = () => applyFilter(`brightness(${1+(j*0.04)}) contrast(1.1)`, div);
+    fContainer.appendChild(div);
+  }
+
+  // --- 4. THEMES ---
+  const themeList = document.getElementById('theme-list');
+  for(let i=1; i<=50; i++) {
+    const div = document.createElement('div');
+    div.className = 'theme-item';
+    div.onclick = () => { selectedBG = `images/theme${i}.jpg`; closeThemes(); applyNow(); };
+    div.innerHTML = `<img src="images/theme${i}.jpg" onerror="this.src='https://via.placeholder.com/150/1a1a1a/ffffff?text=${i}'">`;
+    themeList.appendChild(div);
+  }
+
+  // --- 5. TEXT & IMAGE LOGIC ---
+  function openTextEditor() { document.getElementById('text-overlay').style.display = 'block'; }
+  function closeTextEditor() { document.getElementById('text-overlay').style.display = 'none'; }
+
+  function addTextToPreview() {
+    const val = document.getElementById('text-field').value;
+    if(!val) return;
+    document.querySelectorAll('.text-wrapper').forEach(e => e.remove());
+    const wrapper = document.createElement('div');
+    wrapper.className = 'text-wrapper';
+    wrapper.id = 'active-text-wrapper';
+    const textDiv = document.createElement('div');
+    textDiv.className = 'draggable-text';
+    textDiv.innerText = val;
+    textDiv.style.color = selectedTextColor;
+    textDiv.style.fontFamily = selectedFont;
+    const del = document.createElement('div');
+    del.className = 'delete-text-btn'; del.innerText = 'X';
+    del.onclick = () => wrapper.remove();
+    wrapper.appendChild(textDiv); wrapper.appendChild(del);
+    wrapper.addEventListener('touchstart', (e) => { e.stopPropagation(); setTarget(wrapper); });
+    previewBox.appendChild(wrapper);
+    closeTextEditor(); setTarget(wrapper);
+  }
+
+  userImg.addEventListener('touchstart', (e) => { e.stopPropagation(); setTarget(userImg); });
+  function setTarget(el) {
+    currentTarget = el;
+    document.querySelectorAll('.selected').forEach(x => x.classList.remove('selected'));
+    el.classList.add('selected');
+  }
+  function deselectAll(e) { if(!previewBox.contains(e.target)) { currentTarget = null; document.querySelectorAll('.selected').forEach(x => x.classList.remove('selected')); } }
+
+  function loadUserPhoto(input) {
+    if (input.files && input.files[0]) {
+      const reader = new FileReader();
+      reader.onload = (e) => { userImg.src = e.target.result; userImg.style.display = 'block'; setTarget(userImg); };
+      reader.readAsDataURL(input.files[0]);
+    }
+  }
+
+  async function removeBG() {
+    if (!userImg.src) return;
+    const btn = document.getElementById('remove-btn'); btn.innerText = "...";
+    const formData = new FormData(); formData.append("image_file", document.getElementById('inputImg').files[0]);
+    try {
+      const res = await fetch("https://api.remove.bg/v1.0/removebg", {
+        method: "POST", headers: { "X-Api-Key": "VMQPfQRzJ81o1eNUrcuHTCXd" }, body: formData
+      });
+      if (res.ok) userImg.src = URL.createObjectURL(await res.blob());
+    } catch (e) {}
+    btn.innerHTML = '<i class="fi fi-sr-magic-wand"></i>REMOVE BG';
+  }
+
+  function applyFilter(f, el) { userImg.style.filter = f; document.querySelectorAll('.filter-opt').forEach(o => o.classList.remove('active')); el.classList.add('active'); }
+  function openThemes() { document.getElementById('theme-overlay').style.display = 'block'; }
+  function closeThemes() { document.getElementById('theme-overlay').style.display = 'none'; }
+  function applyNow() { if (selectedBG) previewBox.style.backgroundImage = `url('${selectedBG}')`; }
+  function loadFromGallery(input) {
+    if (input.files && input.files[0]) {
+      const reader = new FileReader();
+      reader.onload = (e) => { selectedBG = e.target.result; applyNow(); closeThemes(); };
+      reader.readAsDataURL(input.files[0]);
+    }
+  }
+
+  // --- 6. TOUCH CONTROL ---
+  let active = false, initialX, initialY, initDist = 0, initAngle = 0;
+  previewBox.addEventListener("touchstart", (e) => {
+    if (!currentTarget) return;
+    let state = (currentTarget.id === "user-img") ? imgState : textState;
+    if (e.touches.length === 1) {
+      active = true;
+      initialX = e.touches[0].clientX - state.x;
+      initialY = e.touches[0].clientY - state.y;
+    } else if (e.touches.length === 2) {
+      active = false;
+      const t1 = e.touches[0], t2 = e.touches[1];
+      initDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+      initAngle = Math.atan2(t2.clientY - t1.clientY, t2.clientX - t1.clientX);
+    }
+  }, {passive: false});
+
+  previewBox.addEventListener("touchmove", (e) => {
+    if (!currentTarget) return;
+    e.preventDefault();
+    let state = (currentTarget.id === "user-img") ? imgState : textState;
+    if (active && e.touches.length === 1) {
+      state.x = e.touches[0].clientX - initialX;
+      state.y = e.touches[0].clientY - initialY;
+    } else if (e.touches.length === 2) {
+      const t1 = e.touches[0], t2 = e.touches[1];
+      const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+      state.scale *= (dist / initDist);
+      initDist = dist;
+      const angle = Math.atan2(t2.clientY - t1.clientY, t2.clientX - t1.clientX);
+      state.rotate += (angle - initAngle) * (180 / Math.PI);
+      initAngle = angle;
+    }
+    currentTarget.style.transform = `translate3d(${state.x}px, ${state.y}px, 0) scale(${state.scale}) rotate(${state.rotate}deg)`;
+  }, {passive: false});
+
+  previewBox.addEventListener("touchend", () => { active = false; });
+
+  // --- 7. FINAL DOWNLOAD ---
+  function downloadProject() {
+    if(!userImg.src) return alert("add image!");
+    const btn = document.getElementById('dl-btn');
+    btn.innerHTML = "⌛ DOWNLOADING...";
+
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = 1200; canvas.height = 1200;
+
+    const bgImg = new Image();
+    bgImg.crossOrigin = "anonymous";
+    let bgUrl = previewBox.style.backgroundImage.replace(/url\(['"]?(.*?)['"]?\)/i, '$1');
+
+    bgImg.onload = function() {
+      ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
+      const mainImg = new Image();
+      mainImg.src = userImg.src;
+      mainImg.onload = function() {
+        const factor = canvas.width / previewBox.offsetWidth;
+        
+        // Jambulani Chithunzi cha User
+        ctx.save();
+        ctx.translate((imgState.x + userImg.offsetWidth/2)*factor, (imgState.y + userImg.offsetHeight/2)*factor);
+        ctx.rotate(imgState.rotate * Math.PI / 180);
+        ctx.scale(imgState.scale, imgState.scale);
+        ctx.filter = getComputedStyle(userImg).filter;
+        ctx.drawImage(mainImg, -(userImg.offsetWidth/2)*factor, -(userImg.offsetHeight/2)*factor, userImg.offsetWidth*factor, userImg.offsetHeight*factor);
+        ctx.restore();
+
+        // Jambulani Mawu (Text)
+        const wrapper = document.getElementById('active-text-wrapper');
+        if(wrapper) {
+            const text = wrapper.querySelector('.draggable-text');
+            ctx.save();
+            ctx.translate((textState.x + wrapper.offsetLeft + wrapper.offsetWidth/2)*factor, (textState.y + wrapper.offsetTop + wrapper.offsetHeight/2)*factor);
+            ctx.rotate(textState.rotate * Math.PI / 180);
+            ctx.scale(textState.scale, textState.scale);
+            ctx.font = `bold 70px ${text.style.fontFamily}`;
+            ctx.fillStyle = text.style.color;
+            ctx.textAlign = "center";
+            ctx.fillText(text.innerText, 0, 20);
+            ctx.restore();
+        }
+
+        const link = document.createElement('a');
+        link.download = `WanderSlapp_${Date.now()}.png`;
+        link.href = canvas.toDataURL("image/png");
+        link.click();
+        btn.innerHTML = '✅ succesful';
+        setTimeout(()=>btn.innerHTML='DOWNLOAD PROJECT', 2000);
+      };
+    };
+    bgImg.src = bgUrl || "https://via.placeholder.com/1200?text=ZECKSHANI+STUDIO";
+  }
+</script>
+</body>
+</html>

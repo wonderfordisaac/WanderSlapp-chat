@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="ny">
+<head>
+<meta charset="utf-8">
+<title>WanderSlapp</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-solid-rounded/css/uicons-solid-rounded.css">
+<link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-regular-rounded/css/uicons-regular-rounded.css">
+<link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-brands/css/uicons-brands.css">
+<style>
+:root{--bg:#0a142b;--text:#f6fbff;--border:#254a83;--ink:#0a2b4f}
+*{box-sizing:border-box}
+html,body{margin:0;color:#222;font-family:system-ui;background:#fff; height: 100vh; overflow: hidden; display: flex; flex-direction: column;}
+
+header{background:var(--bg);border-bottom:1px solid var(--border); z-index: 1000;}
+.topbar {
+    display: flex;
+    justify-content: space-between; /* Izi zipangitsa dzina kukhala kumanzere, ma icon kumanja */
+    align-items: center;
+    padding: 12px 20px;
+}
+.logo-text {
+    color: #28a745; /* Mtundu wa Green */
+    font-weight: bold;
+    font-size: 20px;
+    letter-spacing: 1px;
+    cursor: pointer; /* Izi zimapanga chala mukakhudza dzinali */
+    user-select: none;
+}
+.topbar-icons {
+    display: flex;
+    gap: 30px;
+}
+
+/* Onjezani iyi kuti ma icon aoneke oyera */
+.topbar-icons i {
+    font-size: 22px;
+    color: var(--text); /* Mtundu oyera monga poyamba */
+    cursor: pointer;
+}
+.iconbar{display:flex;justify-content:space-around;padding:12px 0;border-top:1px solid var(--border)}
+.iconbar i{font-size:22px;color:var(--text);cursor:pointer;position:relative}
+
+/* Badge Style */
+.badge{position:absolute;top:-5px;right:-12px;background:red;color:white;font-size:10px;border-radius:50%;padding:2px 6px;display:none;font-weight:bold;border:1px solid var(--bg)}
+
+.main-scroll-area { 
+    flex: 1; 
+    overflow-y: auto; 
+    display: flex; 
+    flex-direction: column; 
+    -webkit-overflow-scrolling: touch;
+}
+
+.top-section{display:flex; align-items: center; gap:15px; padding:15px; border-bottom: 8px solid #f0f2f5;}
+.avatar-top{width:50px;height:50px;border-radius:50%;object-fit:cover;border:2px solid var(--border);cursor:pointer}
+.postbox-top { flex: 1; display:flex; align-items:center; gap:10px; }
+textarea.compose-top{flex:1;background:#0b1730;border:1px solid var(--border);border-radius:12px;color:var(--text);padding:10px;cursor:pointer; resize: none; font-size: 14px; height: 45px;}
+.btn-edit-top{padding:8px;border-radius:8px;border:1px solid var(--border);background:#0b1730;color:var(--text);cursor:pointer}
+
+#postIframe { width: 100%; border: none; flex-shrink: 0; }
+
+#dashFullScreen, #commentOverlay {
+    display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+    background: black; z-index: 9999; flex-direction: column;
+}
+#commentOverlay { background: white; }
+#commentOverlay iframe { width: 100%; height: 100%; border: none; }
+#dashMediaContent { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; }
+#dashMediaContent img, #dashMediaContent video { max-width: 100%; max-height: 95vh; object-fit: contain; }
+.close-fs { position: absolute; top: 20px; left: 20px; color: white; font-size: 35px; cursor: pointer; z-index: 10001; }
+
+#sharePopup { display: none; position: fixed; bottom: 0; left: 0; width: 100%; background: white; border-radius: 20px 20px 0 0; z-index: 10002; padding: 25px; text-align: center; box-shadow: 0 -5px 15px rgba(0,0,0,0.2); }
+.share-opt { display: flex; align-items: center; gap: 15px; padding: 18px; border-bottom: 1px solid #f0f0f0; cursor: pointer; font-size: 17px; font-weight: bold; }
+.share-opt i { font-size: 22px; color: #0a2b4f; }
+    
+ /* Pangani malo a malonda mu Dashboard */
+#adOverlayDashboard {
+    display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+    background: rgba(0,0,0,0.95); z-index: 200000; /* Kupitilira Full Screen */
+    flex-direction: column; align-items: center; justify-content: center;
+}
+</style>
+
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-database-compat.js"></script>
+</head>
+<body>
+
+<header>
+  <div class="topbar">
+    <span class="logo-text" onclick="location.href='dashboard.html'">WanderSlapp</span>
+    
+    <div class="topbar-icons">
+      <i  onclick="location.href='reedNews2.html'">NEWS</i>
+      <i class="fi fi-rr-search" onclick="location.href='seach.html'"></i>
+      <i class="fi fi-rr-menu-burger" onclick="location.href='menu.html'"></i>
+    </div>
+  </div>
+  <div class="iconbar">
+    <i class="fi fi-sr-home" onclick="location.href='dashboard.html'"></i>
+    <div style="position:relative">
+      <i class="fi fi-sr-users-alt" onclick="location.href='friend.html'"></i>
+      <span id="rquestBadge" class="badge"></span>
+    </div>
+    <div style="position:relative">
+      <i class="fi fi-sr-comment-alt-dots" onclick="location.href='massege.html'"></i>
+      <span id="msgBadge" class="badge"></span>
+    </div>
+    <div style="position:relative">
+      <i class="fi fi-rr-bell" onclick="location.href='notfication.html'"></i>
+      <span id="notifBadge" class="badge"></span>
+    </div>
+  </div>
+</header>
+
+<div class="main-scroll-area">
+    <div class="top-section">
+        <img id="myAvatarTop" class="avatar-top" src="https://i.ibb.co/7z5nDqK/avatar.png" onclick="location.href='profile.html'">
+        <div class="postbox-top">
+            <textarea class="compose-top" placeholder="What you wont to post now?..." readonly onclick="location.href='dashboardrightpost.html'"></textarea>
+            <button class="btn-edit-top" onclick="location.href='dashboardrightpost.html'"><i class="fi fi-rr-edit"></i></button>
+        </div>
+    </div>
+    
+    <iframe src="userpost.html" id="postIframe" scrolling="no"></iframe>
+</div>
+
+<div id="dashFullScreen">
+    <span class="close-fs" onclick="closeDashFS()">×</span>
+    <div id="dashMediaContent"></div>
+</div>
+
+<div id="commentOverlay">
+    <iframe id="commentFrame"></iframe>
+</div>
+
+<div id="sharePopup">
+    <div class="share-opt" onclick="handleShare('whatsapp')"><i class="fi fi-sr-phone"></i> Share to  WhatsApp</div>
+    <div class="share-opt" onclick="handleShare('facebook')"><i class="fi fi-sr-apps"></i> Share to Facebook</div>
+    <div class="share-opt" onclick="handleShare('system')"><i class="fi fi-sr-share"></i> Share to More apps</div>
+    <div class="share-opt" onclick="handleShare('copy')"><i class="fi fi-sr-copy"></i> Copy Link</div>
+    <button onclick="document.getElementById('sharePopup').style.display='none'" style="width:100%; padding:15px; border:none; background:#f0f2f5; margin-top:10px; border-radius:10px; color:red; font-weight:bold;">Cancel</button>
+</div>
+    
+ <div id="adOverlayDashboard">
+    <button onclick="this.parentElement.style.display='none'" style="position:absolute; top:30px; right:20px; padding:10px; background:red; color:white; border:none; border-radius:5px; font-weight:bold; z-index:200001;">❌ Close Ad</button>
+    <div id="adMediaDashboard" style="text-align:center;"></div>
+</div>
+
+
+    <script src="monitaize.js"></script><script>
+const firebaseConfig = {
+    apiKey: "AIzaSyDt_ayoflnFkRRnS2fXITY2EzJz0KcW5QA",
+    authDomain: "makert-bfb76.firebaseapp.com",
+    databaseURL: "https://makert-bfb76-default-rtdb.firebaseio.com",
+    projectId: "makert-bfb76",
+    storageBucket: "makert-bfb76.firebasestorage.app",
+    messagingSenderId: "245693362931",
+    appId: "1:245693362931:web:e15662a22dd50d2ac63d86"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+const rtdb = firebase.database();
+
+let currentSharePID = '';
+
+// KULANKHULANA NDI IFRAMES (Post heights, Comments, etc)
+window.addEventListener('message', function(event) {
+    if (event.data.type === 'SET_HEIGHT') {
+        document.getElementById('postIframe').style.height = event.data.height + 'px';
+    }
+    if (event.data.type === 'OPEN_COMMENTS') {
+        const overlay = document.getElementById('commentOverlay');
+        const frame = document.getElementById('commentFrame');
+        frame.src = `comment.html?pid=${event.data.pid}&owner=${event.data.ownerID}`;
+        overlay.style.display = 'flex';
+    }
+    if (event.data.type === 'CLOSE_COMMENTS') {
+        document.getElementById('commentOverlay').style.display = 'none';
+        document.getElementById('commentFrame').src = '';
+    }
+    if (event.data.type === 'OPEN_SHARE') {
+        currentSharePID = event.data.pid;
+        document.getElementById('sharePopup').style.display = 'block';
+    }
+    if (event.data.type === 'FULL_SCREEN') {
+        const fsDiv = document.getElementById('dashFullScreen');
+        const contentDiv = document.getElementById('dashMediaContent');
+        contentDiv.innerHTML = event.data.content;
+        fsDiv.style.display = 'flex';
+    }
+    // Onjezani iyi mkati mwa switch kapena if statements za window message listener
+   if (event.data.type === 'SHOW_AD') {
+       const adBox = document.getElementById('adOverlayDashboard');
+       const adMedia = document.getElementById('adMediaDashboard');
+    
+       let mediaTag = event.data.adType === 'video' 
+          ? `<video src="${event.data.adUrl}" autoplay controls style="max-width:90%; max-height:80vh;"></video>`
+          : `<img src="${event.data.adUrl}" style="max-width:90%; max-height:80vh; object-fit:contain;">`;
+    
+      adMedia.innerHTML = `
+         <div style="position:relative; display:inline-block;">
+             ${mediaTag}
+             <div style="position:absolute; bottom:10px; right:10px; color:#28a745; font-size:12px; font-weight:bold; background:rgba(0,0,0,0.6); padding:3px 8px; border-radius:4px;">wanderSlapp ad</div>
+          </div>
+       `;
+       adBox.style.display = 'flex';
+    }
+});
+
+function handleShare(type) {
+    const url = "https://wanderslapp.web.app/post.html?id=" + currentSharePID;
+    if(type === 'whatsapp') window.open("https://api.whatsapp.com/send?text=" + encodeURIComponent("Onani: " + url));
+    else if(type === 'facebook') window.open("https://www.facebook.com/sharer/sharer.php?u=" + encodeURIComponent(url));
+    else if(type === 'copy') { navigator.clipboard.writeText(url); alert("Copied!"); }
+    else if(type === 'system' && navigator.share) { navigator.share({title:'WanderSlapp', url:url}); }
+    document.getElementById('sharePopup').style.display = 'none';
+}
+
+function closeDashFS() {
+    document.getElementById('dashFullScreen').style.display = 'none';
+    document.getElementById('dashMediaContent').innerHTML = '';
+}
+
+// LOGIC YA MA BADGE NDI USER DATA
+auth.onAuthStateChanged(user => {
+  if(user) {
+    // 1. Avatar ya pamwamba
+    db.collection("users").doc(user.uid).onSnapshot(doc => {
+      if(doc.exists && doc.data().profilePhoto) {
+          document.getElementById("myAvatarTop").src = doc.data().profilePhoto;
+      }
+    });
+
+    // 2. Friend Requests Badge (Firestore)
+    db.collection("friendRequests").where("to", "==", user.uid).where("status", "==", "pending")
+      .onSnapshot(snap => {
+        const badge = document.getElementById("rquestBadge");
+        badge.textContent = snap.size;
+        badge.style.display = snap.size > 0 ? "block" : "none";
+      });
+
+    // 3. Notification Badge (Likes/Comments mu RTDB)
+    rtdb.ref('notifications').orderByChild('to').equalTo(user.uid).on('value', snap => {
+        let count = 0;
+        snap.forEach(child => { if(child.val().read === false) count++; });
+        const badge = document.getElementById("notifBadge");
+        badge.textContent = count;
+        badge.style.display = count > 0 ? "block" : "none";
+    });
+
+    // 4. Message Badge (Chats mu RTDB)
+    rtdb.ref('chats').orderByChild('to').equalTo(user.uid).on('value', snap => {
+        let count = 0;
+        snap.forEach(child => { if(child.val().read === false) count++; });
+        const badge = document.getElementById("msgBadge");
+        badge.textContent = count;
+        badge.style.display = count > 0 ? "block" : "none";
+    });
+  }
+});
+</script>
+<script src="ads.js"></script>
+    
+</body>
+</html>
