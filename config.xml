@@ -8,14 +8,14 @@
     </description>
 
     <author email="wonderfordisaac@gmail.com" href="https://github.com/wonderfordisaac">
-        Dzina Lanu
+        Wonderfordisaac
     </author>
 
     <!-- File lomwe liyenera kuyamba kutseguka -->
     <content src="index.html" />
 
     <!-- Icon ya App (Iyenera kukhala mu www/icon.png) -->
-    <icon src="www/icon.ico" />
+    <icon src="www/icon.png" />
 
     <!-- Kuti App yanu izitha kupeza ma files am'kati -->
     <access origin="*" />
