@@ -1,4 +1,4 @@
-<?xml version='1.0' encoding='utf-8'?>
+<?xml version='2.0' encoding='utf-8'?>
 <widget id="com.wanderslapp.myapp" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
     <!-- Dzina la App yomwe idzaoneke pafoni -->
     <name>WanderSlapp</name>
