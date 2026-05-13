@@ -1,38 +1,25 @@
 <?xml version='1.0' encoding='utf-8'?>
-<widget id="com.wanderslapp.myapp" version="2.1.1" xmlns="http://www.w3.org/ns/widgets" xmlns:android="http://schemas.android.com/apk/res/android">
+<widget id="com.wanderslapp.myapp" version="3.0.1" xmlns="http://www.w3.org/ns/widgets" xmlns:android="http://schemas.android.com/apk/res/android">
     
     <name>WanderSlapp</name>
-    <description>WanderSlapp Professional Application</description>
-    <author email="wonderfordisaac@gmail.com">WanderSlapp Team</author>
+    <description>Professional App</description>
+    <author email="wonderfordisaac@gmail.com">WanderSlapp</author>
 
     <content src="index.html" />
 
-    <!-- 1. ICONS NDI SPLASH SCREEN -->
     <icon src="www/icon.png" />
     <preference name="AndroidWindowSplashScreenBackground" value="#FFFFFF" />
     <preference name="AndroidWindowSplashScreenAnimatedIcon" value="www/icon.png" />
-    <preference name="AndroidWindowSplashScreenBrandingImage" value="www/logo2.png" />
     <preference name="SplashScreenDelay" value="3000" />
     <preference name="AutoHideSplashScreen" value="true" />
-    <preference name="FadeSplashScreen" value="true" />
-    <preference name="FadeSplashScreenDuration" value="500" />
 
-    <!-- 2. PLUGINS ZOFUNIKA -->
-    <!-- Kuti app izionetsa uthenga pamwamba pa foni -->
-    <plugin name="cordova-plugin-local-notification" spec="^0.9.0-beta.2" />
-    
-    <!-- Kuti app izitha kugwira ntchito m'mbuyo (Background) -->
-    <plugin name="cordova-plugin-background-mode" spec="^0.7.2" />
-    
-    <!-- Kuti app izipezeka pa list ya Share mu Gallery/YouTube -->
-    <plugin name="cordova-plugin-openwith" spec="^2.0.0" />
+    <plugin name="cordova-plugin-local-notification" spec="https://github.com/katzer/cordova-plugin-local-notifications.git" />
+    <plugin name="cordova-plugin-background-mode" spec="https://github.com/katzer/cordova-plugin-background-mode.git" />
+    <plugin name="cordova-plugin-openwith-2" spec="https://github.com/clangen/cordova-plugin-openwith.git" />
 
-    <!-- 3. ANDROID SETTINGS -->
     <platform name="android">
         <preference name="AndroidXEnabled" value="true" />
-        <preference name="GradleVersion" value="8.14.2" />
         
-        <!-- Kupanga setup ya Share Intent (OpenWith) -->
         <config-file target="AndroidManifest.xml" parent="/manifest/application/activity">
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />
@@ -42,20 +29,15 @@
             </intent-filter>
         </config-file>
 
-        <!-- Permissions za Notification pa Android 13+ -->
         <config-file target="AndroidManifest.xml" parent="/manifest">
             <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
             <uses-permission android:name="android.permission.WAKE_LOCK" />
+            <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
         </config-file>
     </platform>
 
-    <!-- 4. CHITETEZO NDI MIPATA (ACCESS CONTROL) -->
     <access origin="*" />
     <allow-intent href="http://*/*" />
     <allow-intent href="https://*/*" />
-    <allow-intent href="tel:*" />
-    <allow-intent href="sms:*" />
-    <allow-intent href="mailto:*" />
-    <allow-intent href="geo:*" />
-
 </widget>
+
