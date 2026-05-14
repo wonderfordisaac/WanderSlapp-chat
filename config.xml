@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<widget id="com.wanderslapp.myapp" version="3.5.1" xmlns="http://www.w3.org/ns/widgets" xmlns:android="http://schemas.android.com/apk/res/android">
+<widget id="com.wanderslapp.myapp" version="3.6.2" xmlns="http://www.w3.org/ns/widgets" xmlns:android="http://schemas.android.com/apk/res/android">
     
     <name>WanderSlapp</name>
     <description>Professional App</description>
@@ -10,7 +10,7 @@
     <!-- SPLASH SCREEN -->
     <icon src="www/icon.png" />
     <preference name="AndroidWindowSplashScreenBackground" value="#FFFFFF" />
-    <preference name="AndroidWindowSplashScreenAnimatedIcon" value="www/icon.png" />
+    <preference name="AndroidWindowSplashScreenAnimatedIcon" value="www/Card.png" />
     <preference name="SplashScreenDelay" value="3000" />
     <preference name="AutoHideSplashScreen" value="true" />
 
